@@ -13,12 +13,15 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"google.golang.org/grpc"
 
-	accountpb "task-tracker/gen/account"
-	"task-tracker/internal/account/config"
-	"task-tracker/internal/account/repo"
-	transportgrpc "task-tracker/internal/account/transport/grpc"
-	"task-tracker/internal/account/usecase"
+	schedulerpb "task-tracker/gen/scheduler"
+	taskpb "task-tracker/gen/task"
+	"task-tracker/internal/task/config"
+	taskkafka "task-tracker/internal/task/kafka"
+	"task-tracker/internal/task/repo"
+	transportgrpc "task-tracker/internal/task/transport/grpc"
+	"task-tracker/internal/task/usecase"
 	"task-tracker/pkg/db"
+	pkgkafka "task-tracker/pkg/kafka"
 )
 
 func Run() {
@@ -37,17 +40,27 @@ func Run() {
 		}
 	}()
 
-	userRepo := repo.NewUserRepository(dbConn)
-	hasher := usecase.BcryptHasher{Cost: cfg.BcryptCost}
-	tokens := usecase.JWTManager{
-		Secret: []byte(cfg.JWTSecret),
-		TTL:    cfg.JWTTTL,
+	taskRepo := repo.NewTaskRepository(dbConn)
+	parser := usecase.JWTParser{Secret: []byte(cfg.JWTSecret)}
+
+	writer, err := pkgkafka.NewWriter(cfg.KafkaBrokers, cfg.KafkaTopic)
+	if err != nil {
+		log.Fatalf("init kafka writer: %v", err)
 	}
-	authSvc := usecase.NewAuthService(&userRepo, hasher, tokens)
-	handler := transportgrpc.NewAuthHandler(authSvc)
+	defer func() {
+		if err := writer.Close(); err != nil {
+			log.Printf("close kafka writer: %v", err)
+		}
+	}()
+
+	publisher := taskkafka.NewPublisher(writer)
+	taskSvc := usecase.NewTaskService(&taskRepo, parser, publisher)
+	taskHandler := transportgrpc.NewTaskHandler(taskSvc)
+	schedulerHandler := transportgrpc.NewSchedulerHandler(taskSvc)
 
 	server := grpc.NewServer()
-	accountpb.RegisterAuthServiceServer(server, handler)
+	taskpb.RegisterTaskServiceServer(server, taskHandler)
+	schedulerpb.RegisterSchedulerServiceServer(server, schedulerHandler)
 
 	lis, err := net.Listen("tcp", cfg.GRPCAddr)
 	if err != nil {

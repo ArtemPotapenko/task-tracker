@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"time"
 
 	"task-tracker/pkg/env"
@@ -29,14 +28,11 @@ func Load() (Config, error) {
 
 	cfg := Config{
 		GRPCAddr:   env.GetEnvOrDefault("GRPC_ADDR", ":50051"),
-		DBDriver:   env.GetEnvOrDefault("DB_DRIVER", "postgres"),
-		DBDSN:      env.GetEnvOrDefault("DB_DSN", ""),
+		DBDriver:   env.GetEnvOrDefault("DB_DRIVER", "pgx"),
+		DBDSN:      env.GetEnvOrDefault("DB_DSN", "pgsql:host=localhost port=5433 dbname=testdb user=admin password=secret"),
 		JWTSecret:  env.GetEnvOrDefault("JWT_SECRET", "secret"),
 		JWTTTL:     jwtTTL,
 		BcryptCost: bcryptCost,
-	}
-	if cfg.DBDSN == "" {
-		return Config{}, errors.New("DB_DSN is required")
 	}
 	return cfg, nil
 }

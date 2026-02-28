@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package account.v1;
 
-option go_package = "task-tracker/gen;accountpb";
+option go_package = "task-tracker/gen/account;accountpb";
 
 message RegisterRequest {
   string email = 1;
