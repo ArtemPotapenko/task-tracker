@@ -19,6 +19,7 @@ import (
 	transportgrpc "task-tracker/internal/account/transport/grpc"
 	"task-tracker/internal/account/usecase"
 	"task-tracker/pkg/db"
+	"task-tracker/pkg/jwt"
 )
 
 func Run() {
@@ -39,7 +40,7 @@ func Run() {
 
 	userRepo := repo.NewUserRepository(dbConn)
 	hasher := usecase.BcryptHasher{Cost: cfg.BcryptCost}
-	tokens := usecase.JWTManager{
+	tokens := jwt.Manager{
 		Secret: []byte(cfg.JWTSecret),
 		TTL:    cfg.JWTTTL,
 	}

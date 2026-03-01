@@ -21,6 +21,7 @@ import (
 	transportgrpc "task-tracker/internal/task/transport/grpc"
 	"task-tracker/internal/task/usecase"
 	"task-tracker/pkg/db"
+	pkgjwt "task-tracker/pkg/jwt"
 	pkgkafka "task-tracker/pkg/kafka"
 )
 
@@ -41,7 +42,7 @@ func Run() {
 	}()
 
 	taskRepo := repo.NewTaskRepository(dbConn)
-	parser := usecase.JWTParser{Secret: []byte(cfg.JWTSecret)}
+	parser := pkgjwt.Parser{Secret: []byte(cfg.JWTSecret)}
 
 	writer, err := pkgkafka.NewWriter(cfg.KafkaBrokers, cfg.KafkaTopic)
 	if err != nil {
