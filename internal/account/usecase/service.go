@@ -17,16 +17,21 @@ type TokenManager interface {
 }
 
 type AuthService struct {
-	repo   domain.UserRepository
-	hasher PasswordHasher
-	tokens TokenManager
+	repo      domain.UserRepository
+	hasher    PasswordHasher
+	tokens    TokenManager
+	publisher RegistrationPublisher
 }
 
-func NewAuthService(repo domain.UserRepository, hasher PasswordHasher, tokens TokenManager) AuthService {
-	return AuthService{repo: repo, hasher: hasher, tokens: tokens}
+type RegistrationPublisher interface {
+	PublishRegistered(ctx context.Context, email string) error
 }
 
-func (s AuthService) Register(ctx context.Context, email string, password string) (string, error) {
+func NewAuthService(repo domain.UserRepository, hasher PasswordHasher, tokens TokenManager, publisher RegistrationPublisher) *AuthService {
+	return &AuthService{repo: repo, hasher: hasher, tokens: tokens, publisher: publisher}
+}
+
+func (s *AuthService) Register(ctx context.Context, email string, password string) (string, error) {
 	_, err := s.repo.GetByEmail(ctx, email)
 	switch {
 	case err == nil:
@@ -47,10 +52,16 @@ func (s AuthService) Register(ctx context.Context, email string, password string
 		return "", err
 	}
 
+	if s.publisher != nil {
+		if err := s.publisher.PublishRegistered(ctx, user.Email); err != nil {
+			return "", err
+		}
+	}
+
 	return s.tokens.NewToken(user.ID, user.Email)
 }
 
-func (s AuthService) Login(ctx context.Context, email string, password string) (string, error) {
+func (s *AuthService) Login(ctx context.Context, email string, password string) (string, error) {
 	user, err := s.repo.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -64,4 +75,11 @@ func (s AuthService) Login(ctx context.Context, email string, password string) (
 	}
 
 	return s.tokens.NewToken(user.ID, user.Email)
+}
+
+func (s *AuthService) GetUsersByIDs(ctx context.Context, ids []int64) ([]domain.User, error) {
+	if len(ids) == 0 {
+		return []domain.User{}, nil
+	}
+	return s.repo.GetByIDs(ctx, ids)
 }

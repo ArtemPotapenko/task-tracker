@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	accountkafka "task-tracker/internal/account/transport/kafka"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -20,6 +21,7 @@ import (
 	"task-tracker/internal/account/usecase"
 	"task-tracker/pkg/db"
 	"task-tracker/pkg/jwt"
+	pkgkafka "task-tracker/pkg/kafka"
 )
 
 func Run() {
@@ -44,11 +46,25 @@ func Run() {
 		Secret: []byte(cfg.JWTSecret),
 		TTL:    cfg.JWTTTL,
 	}
-	authSvc := usecase.NewAuthService(&userRepo, hasher, tokens)
+
+	writer, err := pkgkafka.NewWriter(cfg.KafkaBroker, cfg.KafkaTopic)
+	if err != nil {
+		log.Fatalf("init kafka writer: %v", err)
+	}
+	defer func() {
+		if err := writer.Close(); err != nil {
+			log.Printf("close kafka writer: %v", err)
+		}
+	}()
+
+	publisher := accountkafka.NewPublisher(writer)
+	authSvc := usecase.NewAuthService(&userRepo, hasher, tokens, publisher)
 	handler := transportgrpc.NewAuthHandler(authSvc)
 
 	server := grpc.NewServer()
 	accountpb.RegisterAuthServiceServer(server, handler)
+	usersHandler := transportgrpc.NewUsersHandler(authSvc)
+	accountpb.RegisterUsersServiceServer(server, usersHandler)
 
 	lis, err := net.Listen("tcp", cfg.GRPCAddr)
 	if err != nil {

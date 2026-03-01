@@ -19,10 +19,10 @@ var emailPattern = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 
 type AuthHandler struct {
 	accountpb.UnimplementedAuthServiceServer
-	svc usecase.AuthService
+	svc *usecase.AuthService
 }
 
-func NewAuthHandler(svc usecase.AuthService) AuthHandler {
+func NewAuthHandler(svc *usecase.AuthService) AuthHandler {
 	return AuthHandler{svc: svc}
 }
 

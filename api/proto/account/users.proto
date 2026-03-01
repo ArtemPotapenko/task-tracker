@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package account.v1;
+
+option go_package = "task-tracker/gen/account;accountpb";
+
+message User {
+  int64 id = 1;
+  string email = 2;
+}
+
+message GetUsersByIDsRequest {
+  repeated int64 ids = 1;
+}
+
+message UsersResponse {
+  repeated User users = 1;
+}
+
+service UsersService {
+  rpc GetUsersByIDs(GetUsersByIDsRequest) returns (UsersResponse);
+}

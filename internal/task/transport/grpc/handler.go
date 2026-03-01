@@ -15,10 +15,10 @@ import (
 
 type TaskHandler struct {
 	taskpb.UnimplementedTaskServiceServer
-	svc usecase.TaskService
+	svc *usecase.TaskService
 }
 
-func NewTaskHandler(svc usecase.TaskService) TaskHandler {
+func NewTaskHandler(svc *usecase.TaskService) TaskHandler {
 	return TaskHandler{svc: svc}
 }
 

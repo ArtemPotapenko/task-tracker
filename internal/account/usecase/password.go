@@ -6,7 +6,7 @@ type BcryptHasher struct {
 	Cost int
 }
 
-func (h BcryptHasher) Hash(password string) (string, error) {
+func (h *BcryptHasher) Hash(password string) (string, error) {
 	cost := h.Cost
 	if cost == 0 {
 		cost = bcrypt.DefaultCost
@@ -18,6 +18,6 @@ func (h BcryptHasher) Hash(password string) (string, error) {
 	return string(bytes), nil
 }
 
-func (h BcryptHasher) Compare(hash string, password string) bool {
+func (h *BcryptHasher) Compare(hash string, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }

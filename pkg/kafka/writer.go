@@ -2,19 +2,21 @@ package kafka
 
 import (
 	"errors"
+	"strings"
 
-	kafka "github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go"
 )
 
-var ErrEmptyBrokers = errors.New("kafka brokers list is empty")
+var ErrEmptyBroker = errors.New("kafka broker is empty")
 
-func NewWriter(brokers []string, topic string) (*kafka.Writer, error) {
-	if len(brokers) == 0 {
-		return nil, ErrEmptyBrokers
+func NewWriter(broker string, topic string) (*kafka.Writer, error) {
+	broker = strings.TrimSpace(broker)
+	if broker == "" {
+		return nil, ErrEmptyBroker
 	}
 
 	return &kafka.Writer{
-		Addr:     kafka.TCP(brokers...),
+		Addr:     kafka.TCP(broker),
 		Topic:    topic,
 		Balancer: &kafka.LeastBytes{},
 	}, nil

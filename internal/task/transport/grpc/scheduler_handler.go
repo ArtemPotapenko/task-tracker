@@ -15,10 +15,10 @@ import (
 
 type SchedulerHandler struct {
 	schedulerpb.UnimplementedSchedulerServiceServer
-	svc usecase.TaskService
+	svc *usecase.TaskService
 }
 
-func NewSchedulerHandler(svc usecase.TaskService) SchedulerHandler {
+func NewSchedulerHandler(svc *usecase.TaskService) SchedulerHandler {
 	return SchedulerHandler{svc: svc}
 }
 

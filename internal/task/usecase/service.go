@@ -24,11 +24,11 @@ type TaskService struct {
 	now    func() time.Time
 }
 
-func NewTaskService(repo domain.TaskRepository, tokens TokenParser, events TaskEventPublisher) TaskService {
-	return TaskService{repo: repo, tokens: tokens, events: events, now: time.Now}
+func NewTaskService(repo domain.TaskRepository, tokens TokenParser, events TaskEventPublisher) *TaskService {
+	return &TaskService{repo: repo, tokens: tokens, events: events, now: time.Now}
 }
 
-func (s TaskService) Create(ctx context.Context, token, description string, dueDate time.Time) (domain.Task, error) {
+func (s *TaskService) Create(ctx context.Context, token, description string, dueDate time.Time) (domain.Task, error) {
 	if description == "" || dueDate.IsZero() {
 		return domain.Task{}, ErrInvalidInput
 	}
@@ -48,7 +48,7 @@ func (s TaskService) Create(ctx context.Context, token, description string, dueD
 	return s.repo.Create(ctx, task)
 }
 
-func (s TaskService) GetByID(ctx context.Context, token string, id int64) (domain.Task, error) {
+func (s *TaskService) GetByID(ctx context.Context, token string, id int64) (domain.Task, error) {
 	if id <= 0 {
 		return domain.Task{}, ErrInvalidInput
 	}
@@ -61,7 +61,7 @@ func (s TaskService) GetByID(ctx context.Context, token string, id int64) (domai
 	return s.repo.GetByIDAndUserID(ctx, id, userID)
 }
 
-func (s TaskService) GetToday(ctx context.Context, token string) ([]domain.Task, error) {
+func (s *TaskService) GetToday(ctx context.Context, token string) ([]domain.Task, error) {
 	userID, err := s.tokens.ParseUserID(token)
 	if err != nil {
 		return nil, ErrInvalidToken
@@ -75,14 +75,14 @@ func (s TaskService) GetToday(ctx context.Context, token string) ([]domain.Task,
 	return s.repo.GetByUserIDAndDueDateBetween(ctx, userID, start, end)
 }
 
-func (s TaskService) GetRecentExpired(ctx context.Context) ([]domain.Task, error) {
+func (s *TaskService) GetRecentExpired(ctx context.Context) ([]domain.Task, error) {
 	now := s.now()
 	from := now.Add(-10 * time.Minute)
 
 	return s.repo.GetByDueDateBetweenAndStatusNot(ctx, from, now, domain.COMPLETED)
 }
 
-func (s TaskService) ProcessRecentExpired(ctx context.Context) error {
+func (s *TaskService) ProcessRecentExpired(ctx context.Context) error {
 	now := s.now()
 	from := now.Add(-10 * time.Minute)
 
@@ -128,7 +128,7 @@ func (s TaskService) ProcessRecentExpired(ctx context.Context) error {
 	return s.events.PublishExpiredSummary(ctx, summary)
 }
 
-func (s TaskService) UpdateStatus(ctx context.Context, token string, id int64, status domain.TaskStatus) (domain.Task, error) {
+func (s *TaskService) UpdateStatus(ctx context.Context, token string, id int64, status domain.TaskStatus) (domain.Task, error) {
 	if id <= 0 {
 		return domain.Task{}, ErrInvalidInput
 	}
