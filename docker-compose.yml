@@ -1,0 +1,150 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d testdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  kafka:
+    image: bitnami/kafka:3.7
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "9092:9092"
+
+  account-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE: cmd/account-service
+    environment:
+      GRPC_ADDR: ":50051"
+      DB_DRIVER: pgx
+      DB_DSN: "postgres://admin:secret@postgres:5432/testdb?sslmode=disable"
+      JWT_SECRET: secret
+      JWT_TTL: 12h
+      BCRYPT_COST: 10
+      KAFKA_BROKER: kafka:9092
+      KAFKA_REGISTER_TOPIC: register
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "50051:50051"
+
+  task-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE: cmd/task-manager
+    environment:
+      GRPC_ADDR: ":50052"
+      DB_DRIVER: pgx
+      DB_DSN: "postgres://admin:secret@postgres:5432/testdb?sslmode=disable"
+      JWT_SECRET: secret
+      KAFKA_BROKER: kafka:9092
+      KAFKA_TOPIC: task-expired-summary
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "50052:50052"
+
+  email-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE: cmd/email-service
+    environment:
+      SMTP_HOST: smtp
+      SMTP_PORT: "1025"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: "noreply@example.com"
+      SMTP_USE_TLS: "false"
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      DEDUPE_TTL: 24h
+      ACCOUNT_GRPC_ADDR: account-service:50051
+      KAFKA_BROKER: kafka:9092
+      REGISTER_TOPIC: register
+      DAILY_SUMMARY_TOPIC: daily-summary
+      GROUP_ID: email-service
+      TIMEOUT: 5s
+    depends_on:
+      redis:
+        condition: service_started
+      kafka:
+        condition: service_started
+      account-service:
+        condition: service_started
+
+  scheduler-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE: cmd/task-scheduler
+    environment:
+      TASK_GRPC_ADDR: task-service:50052
+      INTERVAL: 1m
+      CALL_TIMEOUT: 10s
+    depends_on:
+      task-service:
+        condition: service_started
+
+  http-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        SERVICE: cmd/http-gateway
+    environment:
+      GATEWAY_HTTP_ADDR: ":8080"
+      ACCOUNT_GRPC_ADDR: account-service:50051
+      TASK_GRPC_ADDR: task-service:50052
+      GATEWAY_SHUTDOWN_TIMEOUT: 5s
+    depends_on:
+      account-service:
+        condition: service_started
+      task-service:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+  smtp:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025"
+      - "8025:8025"

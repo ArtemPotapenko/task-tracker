@@ -1,0 +1,7 @@
+**/.git
+**/.idea
+**/gen
+**/third_party
+**/tmp
+**/*.log
+**/node_modules
