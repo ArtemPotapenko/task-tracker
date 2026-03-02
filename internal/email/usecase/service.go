@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"task-tracker/pkg/logger"
 	"time"
 )
 
@@ -43,25 +44,39 @@ type DailySummaryMessage struct {
 
 func (s *Service) SendWelcome(ctx context.Context, msg RegisterMessage) error {
 	if msg.Email == "" {
+		logger.Log.Infof("email send welcome: empty email")
 		return errors.New("empty email")
 	}
 	if ok, err := s.allow(ctx, keyRegister(msg.Email)); err != nil || !ok {
+		if err != nil {
+			logger.Log.Infof("email send welcome: dedupe error email=%s err=%v", msg.Email, err)
+		}
 		return err
 	}
 
 	subject := "Добро пожаловать в Task Tracker"
 	body := "Здравствуйте! Ваш аккаунт успешно создан."
-	return s.mailer.Send(msg.Email, subject, body)
+	if err := s.mailer.Send(msg.Email, subject, body); err != nil {
+		logger.Log.Infof("email send welcome: send error email=%s err=%v", msg.Email, err)
+		return err
+	}
+	logger.Log.Infof("email send welcome: success email=%s", msg.Email)
+	return nil
 }
 
 func (s *Service) SendDailySummary(ctx context.Context, email string, userID int64, completed, notCompleted int, date string) error {
 	if email == "" {
+		logger.Log.Infof("email send daily: empty email user_id=%d", userID)
 		return errors.New("empty email")
 	}
 	if userID <= 0 {
+		logger.Log.Infof("email send daily: invalid user id=%d", userID)
 		return errors.New("invalid user id")
 	}
 	if ok, err := s.allow(ctx, keyDaily(date, userID)); err != nil || !ok {
+		if err != nil {
+			logger.Log.Infof("email send daily: dedupe error user_id=%d err=%v", userID, err)
+		}
 		return err
 	}
 
@@ -71,14 +86,27 @@ func (s *Service) SendDailySummary(ctx context.Context, email string, userID int
 	}
 	subject := "Ежедневный отчет по задачам"
 	body := fmt.Sprintf("Ваш отчет за %s:\nВыполнено: %d\nНе выполнено: %d", dateLine, completed, notCompleted)
-	return s.mailer.Send(email, subject, body)
+	if err := s.mailer.Send(email, subject, body); err != nil {
+		logger.Log.Infof("email send daily: send error user_id=%d email=%s err=%v", userID, email, err)
+		return err
+	}
+	logger.Log.Infof("email send daily: success user_id=%d email=%s", userID, email)
+	return nil
 }
 
 func (s *Service) allow(ctx context.Context, key string) (bool, error) {
 	if s.dedupe == nil {
 		return true, nil
 	}
-	return s.dedupe.Once(ctx, key, s.dedupeTTL)
+	ok, err := s.dedupe.Once(ctx, key, s.dedupeTTL)
+	if err != nil {
+		logger.Log.Infof("email dedupe: error key=%s err=%v", key, err)
+		return false, err
+	}
+	if !ok {
+		logger.Log.Infof("email dedupe: blocked key=%s", key)
+	}
+	return ok, nil
 }
 
 func keyRegister(email string) string {

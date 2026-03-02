@@ -4,7 +4,7 @@ import (
 	"context"
 	"task-tracker/internal/email/transport/kafka"
 
-	accountpb "task-tracker/gen/account"
+	accountpb "task-tracker/gen/internal/account"
 )
 
 type AccountClientAdapter struct {

@@ -10,6 +10,7 @@ import (
 	"github.com/Masterminds/squirrel"
 
 	"task-tracker/internal/task/domain"
+	"task-tracker/pkg/logger"
 )
 
 type TaskRepository struct {
@@ -32,6 +33,7 @@ func (r *TaskRepository) Create(ctx context.Context, task domain.Task) (domain.T
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("build insert tasks query: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 
 	var id int64
 	if err := r.conn.QueryRowContext(ctx, query, args...).Scan(&id); err != nil {
@@ -51,6 +53,7 @@ func (r *TaskRepository) GetByID(ctx context.Context, id int64) (domain.Task, er
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("select task: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 
 	task := domain.Task{}
 	err = r.conn.QueryRowContext(ctx, query, args...).Scan(
@@ -79,6 +82,7 @@ func (r *TaskRepository) GetByIDAndUserID(ctx context.Context, id, userID int64)
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("select task: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 
 	task := domain.Task{}
 	err = r.conn.QueryRowContext(ctx, query, args...).Scan(
@@ -108,6 +112,7 @@ func (r *TaskRepository) GetByDueDateBetween(ctx context.Context, from, to time.
 	if err != nil {
 		return nil, fmt.Errorf("select tasks: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 
 	rows, err := r.conn.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -147,6 +152,7 @@ func (r *TaskRepository) GetByUserIDAndDueDateBetween(ctx context.Context, userI
 	if err != nil {
 		return nil, fmt.Errorf("select tasks: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 
 	rows, err := r.conn.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -186,6 +192,7 @@ func (r *TaskRepository) GetByDueDateBetweenAndStatusNot(ctx context.Context, fr
 	if err != nil {
 		return nil, fmt.Errorf("select tasks: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 
 	rows, err := r.conn.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -224,6 +231,7 @@ func (r *TaskRepository) UpdateStatusByIDAndUserID(ctx context.Context, id, user
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("update task: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 
 	task := domain.Task{}
 	err = r.conn.QueryRowContext(ctx, query, args...).Scan(
@@ -256,6 +264,7 @@ func (r *TaskRepository) UpdateStatusByIDs(ctx context.Context, ids []int64, sta
 	if err != nil {
 		return fmt.Errorf("update tasks: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 
 	if _, err := r.conn.ExecContext(ctx, query, args...); err != nil {
 		return fmt.Errorf("update tasks: %w", err)

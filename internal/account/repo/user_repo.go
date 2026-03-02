@@ -9,6 +9,7 @@ import (
 	"github.com/Masterminds/squirrel"
 
 	"task-tracker/internal/account/domain"
+	"task-tracker/pkg/logger"
 )
 
 type UserRepository struct {
@@ -29,6 +30,7 @@ func (r *UserRepository) Create(ctx context.Context, user domain.User) (domain.U
 	if err != nil {
 		return domain.User{}, fmt.Errorf("build insert users query: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 
 	var id int64
 	if err := r.conn.QueryRowContext(ctx, query, args...).Scan(&id); err != nil {
@@ -48,6 +50,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (domain.U
 	if err != nil {
 		return domain.User{}, fmt.Errorf("select user: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 
 	user := domain.User{}
 	err = r.conn.QueryRowContext(ctx, query, args...).Scan(&user.ID, &user.Email, &user.PasswordHash)
@@ -72,6 +75,7 @@ func (r *UserRepository) GetByIDs(ctx context.Context, ids []int64) ([]domain.Us
 	if err != nil {
 		return nil, fmt.Errorf("select users: %w", err)
 	}
+	logger.Log.Infof("sql: %s", query)
 	rows, err := r.conn.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("select users: %w", err)

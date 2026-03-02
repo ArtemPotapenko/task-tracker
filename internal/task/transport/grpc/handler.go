@@ -8,9 +8,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	taskpb "task-tracker/gen/task"
+	taskpb "task-tracker/gen/external/task"
 	"task-tracker/internal/task/domain"
 	"task-tracker/internal/task/usecase"
+	"task-tracker/pkg/logger"
 )
 
 type TaskHandler struct {
@@ -18,12 +19,13 @@ type TaskHandler struct {
 	svc *usecase.TaskService
 }
 
-func NewTaskHandler(svc *usecase.TaskService) TaskHandler {
-	return TaskHandler{svc: svc}
+func NewTaskHandler(svc *usecase.TaskService) *TaskHandler {
+	return &TaskHandler{svc: svc}
 }
 
-func (h TaskHandler) GetTask(ctx context.Context, req *taskpb.GetTaskRequest) (*taskpb.TaskResponse, error) {
+func (h *TaskHandler) GetTask(ctx context.Context, req *taskpb.GetTaskRequest) (*taskpb.TaskResponse, error) {
 	if req.GetJwt() == "" {
+		logger.Log.Infof("grpc get task: missing token")
 		return nil, status.Error(codes.Unauthenticated, "missing token")
 	}
 
@@ -34,8 +36,9 @@ func (h TaskHandler) GetTask(ctx context.Context, req *taskpb.GetTaskRequest) (*
 	return &taskpb.TaskResponse{Task: toProtoTask(task)}, nil
 }
 
-func (h TaskHandler) GetTodayTasks(ctx context.Context, req *taskpb.GetTasksRequest) (*taskpb.TasksResponse, error) {
+func (h *TaskHandler) GetTodayTasks(ctx context.Context, req *taskpb.GetTasksRequest) (*taskpb.TasksResponse, error) {
 	if req.GetJwt() == "" {
+		logger.Log.Infof("grpc get today: missing token")
 		return nil, status.Error(codes.Unauthenticated, "missing token")
 	}
 
@@ -46,11 +49,13 @@ func (h TaskHandler) GetTodayTasks(ctx context.Context, req *taskpb.GetTasksRequ
 	return &taskpb.TasksResponse{Tasks: toProtoTasks(tasks)}, nil
 }
 
-func (h TaskHandler) CreateTask(ctx context.Context, req *taskpb.CreateTaskRequest) (*taskpb.TaskResponse, error) {
+func (h *TaskHandler) CreateTask(ctx context.Context, req *taskpb.CreateTaskRequest) (*taskpb.TaskResponse, error) {
 	if req.GetJwt() == "" {
+		logger.Log.Infof("grpc create task: missing token")
 		return nil, status.Error(codes.Unauthenticated, "missing token")
 	}
 	if req.GetDueDate() <= 0 {
+		logger.Log.Infof("grpc create task: invalid due date")
 		return nil, status.Error(codes.InvalidArgument, "invalid due date")
 	}
 
@@ -62,13 +67,15 @@ func (h TaskHandler) CreateTask(ctx context.Context, req *taskpb.CreateTaskReque
 	return &taskpb.TaskResponse{Task: toProtoTask(task)}, nil
 }
 
-func (h TaskHandler) UpdateTaskStatus(ctx context.Context, req *taskpb.UpdateTaskStatusRequest) (*taskpb.TaskResponse, error) {
+func (h *TaskHandler) UpdateTaskStatus(ctx context.Context, req *taskpb.UpdateTaskStatusRequest) (*taskpb.TaskResponse, error) {
 	if req.GetJwt() == "" {
+		logger.Log.Infof("grpc update task status: missing token")
 		return nil, status.Error(codes.Unauthenticated, "missing token")
 	}
 
 	statusValue, err := toDomainStatus(req.GetStatus())
 	if err != nil {
+		logger.Log.Infof("grpc update task status: invalid status err=%v", err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 

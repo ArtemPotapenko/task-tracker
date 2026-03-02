@@ -8,9 +8,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	accountpb "task-tracker/gen/account"
+	accountpb "task-tracker/gen/external/account"
 	"task-tracker/internal/account/domain"
 	"task-tracker/internal/account/usecase"
+	"task-tracker/pkg/logger"
 )
 
 const minPasswordLength = 8
@@ -28,9 +29,11 @@ func NewAuthHandler(svc *usecase.AuthService) AuthHandler {
 
 func (h AuthHandler) Register(ctx context.Context, req *accountpb.RegisterRequest) (*accountpb.AuthResponse, error) {
 	if err := validateEmailPassword(req.GetEmail(), req.GetPassword()); err != nil {
+		logger.Log.Infof("grpc register: invalid email/password email=%s err=%v", req.GetEmail(), err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	if len(req.GetRepeatPassword()) < minPasswordLength {
+		logger.Log.Infof("grpc register: invalid repeat password email=%s", req.GetEmail())
 		return nil, status.Error(codes.InvalidArgument, "password must be at least 8 characters")
 	}
 
@@ -43,6 +46,7 @@ func (h AuthHandler) Register(ctx context.Context, req *accountpb.RegisterReques
 
 func (h AuthHandler) Login(ctx context.Context, req *accountpb.LoginRequest) (*accountpb.AuthResponse, error) {
 	if err := validateEmailPassword(req.GetEmail(), req.GetPassword()); err != nil {
+		logger.Log.Infof("grpc login: invalid email/password email=%s err=%v", req.GetEmail(), err)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 

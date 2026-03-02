@@ -194,7 +194,7 @@ const file_account_auth_proto_rawDesc = "" +
 	"\x03jwt\x18\x01 \x01(\tR\x03jwt2\x8d\x01\n" +
 	"\vAuthService\x12A\n" +
 	"\bRegister\x12\x1b.account.v1.RegisterRequest\x1a\x18.account.v1.AuthResponse\x12;\n" +
-	"\x05Login\x12\x18.account.v1.LoginRequest\x1a\x18.account.v1.AuthResponseB$Z\"task-tracker/gen/account;accountpbb\x06proto3"
+	"\x05Login\x12\x18.account.v1.LoginRequest\x1a\x18.account.v1.AuthResponseB$Z\"task-tracker/gen/external/account;accountpbb\x06proto3"
 
 var (
 	file_account_auth_proto_rawDescOnce sync.Once

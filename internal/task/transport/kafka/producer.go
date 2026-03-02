@@ -8,6 +8,7 @@ import (
 	"github.com/segmentio/kafka-go"
 
 	"task-tracker/internal/task/usecase"
+	"task-tracker/pkg/logger"
 )
 
 type ExpiredSummaryMessage struct {
@@ -48,11 +49,17 @@ func (p *Publisher) PublishExpiredSummary(ctx context.Context, summary usecase.E
 
 	data, err := json.Marshal(payload)
 	if err != nil {
+		logger.Log.Infof("kafka publish expired summary: marshal error err=%v", err)
 		return err
 	}
 
-	return p.writer.WriteMessages(ctx, kafka.Message{
+	if err := p.writer.WriteMessages(ctx, kafka.Message{
 		Key:   []byte(strconv.FormatInt(payload.WindowEnd, 10)),
 		Value: data,
-	})
+	}); err != nil {
+		logger.Log.Infof("kafka publish expired summary: write error err=%v", err)
+		return err
+	}
+	logger.Log.Infof("kafka publish expired summary: success users=%d", len(payload.Users))
+	return nil
 }

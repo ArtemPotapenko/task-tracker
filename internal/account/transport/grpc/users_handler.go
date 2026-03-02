@@ -7,9 +7,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	accountpb "task-tracker/gen/account"
+	accountpb "task-tracker/gen/internal/account"
 	"task-tracker/internal/account/domain"
 	"task-tracker/internal/account/usecase"
+	"task-tracker/pkg/logger"
 )
 
 type UsersHandler struct {
@@ -24,6 +25,7 @@ func NewUsersHandler(svc *usecase.AuthService) UsersHandler {
 func (h UsersHandler) GetUsersByIDs(ctx context.Context, req *accountpb.GetUsersByIDsRequest) (*accountpb.UsersResponse, error) {
 	ids := req.GetIds()
 	if len(ids) == 0 {
+		logger.Log.Infof("grpc get users: empty ids")
 		return nil, status.Error(codes.InvalidArgument, "ids are required")
 	}
 

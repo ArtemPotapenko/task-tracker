@@ -2,19 +2,19 @@ package app
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"task-tracker/internal/email/cache"
 	kafka2 "task-tracker/internal/email/transport/kafka"
+	"task-tracker/pkg/logger"
 	"time"
 
 	"github.com/segmentio/kafka-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	accountpb "task-tracker/gen/account"
+	accountpb "task-tracker/gen/internal/account"
 	"task-tracker/internal/email/config"
 	"task-tracker/internal/email/mailer"
 	transportgrpc "task-tracker/internal/email/transport/grpc"
@@ -26,48 +26,48 @@ import (
 func Run() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		logger.Log.Fatalf("load config: %v", err)
 	}
 
 	mailerClient, err := mailer.NewSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.SMTPUseTLS, cfg.Timeout)
 	if err != nil {
-		log.Fatalf("init smtp: %v", err)
+		logger.Log.Fatalf("init smtp: %v", err)
 	}
 
 	redisClient, err := pkgcache.NewClient(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB, cfg.Timeout)
 	if err != nil {
-		log.Fatalf("init redis: %v", err)
+		logger.Log.Fatalf("init redis: %v", err)
 	}
 	defer func() {
 		if err := redisClient.Close(); err != nil {
-			log.Printf("close redis: %v", err)
+			logger.Log.Infof("close redis: %v", err)
 		}
 	}()
 
-	dedupe := cache.NewRedisDedupe(redisClient)
+	dedupe := cache.NewRedisDedupe(redisAdapter{client: redisClient})
 	service := usecase.NewService(mailerClient, dedupe, cfg.DedupeTTL)
-	consumer := kafka2.NewConsumer(service, log.Default())
+	consumer := kafka2.NewConsumer(service)
 
-	accountConn, err := grpc.Dial(cfg.AccountGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	accountConn, err := grpc.NewClient(cfg.AccountGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("dial account grpc: %v", err)
+		logger.Log.Fatalf("dial account grpc: %v", err)
 	}
 	defer func() {
 		if err := accountConn.Close(); err != nil {
-			log.Printf("close account grpc: %v", err)
+			logger.Log.Infof("close account grpc: %v", err)
 		}
 	}()
 	accountClient := transportgrpc.NewAccountClientAdapter(accountpb.NewUsersServiceClient(accountConn))
 
 	registerReader, err := pkgkafka.NewReader(cfg.KafkaBroker, cfg.RegisterTopic, cfg.GroupID+"-register")
 	if err != nil {
-		log.Fatalf("init register reader: %v", err)
+		logger.Log.Fatalf("init register reader: %v", err)
 	}
 	defer registerReader.Close()
 
 	dailyReader, err := pkgkafka.NewReader(cfg.KafkaBroker, cfg.DailySummaryTopic, cfg.GroupID+"-daily")
 	if err != nil {
-		log.Fatalf("init daily reader: %v", err)
+		logger.Log.Fatalf("init daily reader: %v", err)
 	}
 	defer dailyReader.Close()
 
@@ -86,7 +86,7 @@ func Run() {
 		cancel()
 	case err := <-errCh:
 		if err != nil {
-			log.Printf("consumer error: %v", err)
+			logger.Log.Infof("consumer error: %v", err)
 		}
 		cancel()
 	}
@@ -109,7 +109,7 @@ func (r *readerAdapter) CommitMessages(ctx context.Context, msg kafka2.Message) 
 }
 
 type redisAdapter struct {
-	client *cache.Client
+	client *pkgcache.Client
 }
 
 func (r redisAdapter) SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error) {

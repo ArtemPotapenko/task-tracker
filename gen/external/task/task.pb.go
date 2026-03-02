@@ -502,7 +502,7 @@ const file_task_task_proto_rawDesc = "" +
 	"\rGetTodayTasks\x12\x18.task.v1.GetTasksRequest\x1a\x16.task.v1.TasksResponse\x12?\n" +
 	"\n" +
 	"CreateTask\x12\x1a.task.v1.CreateTaskRequest\x1a\x15.task.v1.TaskResponse\x12K\n" +
-	"\x10UpdateTaskStatus\x12 .task.v1.UpdateTaskStatusRequest\x1a\x15.task.v1.TaskResponseB\x1eZ\x1ctask-tracker/gen/task;taskpbb\x06proto3"
+	"\x10UpdateTaskStatus\x12 .task.v1.UpdateTaskStatusRequest\x1a\x15.task.v1.TaskResponseB\x1eZ\x1ctask-tracker/gen/external/task;taskpbb\x06proto3"
 
 var (
 	file_task_task_proto_rawDescOnce sync.Once

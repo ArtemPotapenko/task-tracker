@@ -2,7 +2,9 @@ syntax = "proto3";
 
 package task.v1;
 
-option go_package = "task-tracker/gen/task;taskpb";
+option go_package = "task-tracker/gen/external/task;taskpb";
+
+import "google/api/annotations.proto";
 
 enum TaskStatus {
   TASK_STATUS_CREATED = 0;
@@ -50,8 +52,26 @@ message TasksResponse {
 }
 
 service TaskService {
-  rpc GetTask(GetTaskRequest) returns (TaskResponse);
-  rpc GetTodayTasks(GetTasksRequest) returns (TasksResponse);
-  rpc CreateTask(CreateTaskRequest) returns (TaskResponse);
-  rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (TaskResponse);
+  rpc GetTask(GetTaskRequest) returns (TaskResponse) {
+    option (google.api.http) = {
+      get: "/v1/tasks/{id}"
+    };
+  }
+  rpc GetTodayTasks(GetTasksRequest) returns (TasksResponse) {
+    option (google.api.http) = {
+      get: "/v1/tasks/today"
+    };
+  }
+  rpc CreateTask(CreateTaskRequest) returns (TaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/tasks"
+      body: "*"
+    };
+  }
+  rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (TaskResponse) {
+    option (google.api.http) = {
+      patch: "/v1/tasks/{id}/status"
+      body: "*"
+    };
+  }
 }

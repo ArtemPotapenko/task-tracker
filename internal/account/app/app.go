@@ -3,18 +3,19 @@ package app
 import (
 	"context"
 	"errors"
-	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	accountkafka "task-tracker/internal/account/transport/kafka"
+	"task-tracker/pkg/logger"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"google.golang.org/grpc"
 
-	accountpb "task-tracker/gen/account"
+	accountpb "task-tracker/gen/external/account"
+	accountinternalpb "task-tracker/gen/internal/account"
 	"task-tracker/internal/account/config"
 	"task-tracker/internal/account/repo"
 	transportgrpc "task-tracker/internal/account/transport/grpc"
@@ -27,21 +28,21 @@ import (
 func Run() {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		logger.Log.Fatalf("load config: %v", err)
 	}
 
 	dbConn, err := db.Open(context.Background(), cfg.DBDriver, cfg.DBDSN, 5*time.Second)
 	if err != nil {
-		log.Fatalf("open db: %v", err)
+		logger.Log.Fatalf("open db: %v", err)
 	}
 	defer func() {
 		if err := dbConn.Close(); err != nil {
-			log.Printf("close db: %v", err)
+			logger.Log.Infof("close db: %v", err)
 		}
 	}()
 
 	userRepo := repo.NewUserRepository(dbConn)
-	hasher := usecase.BcryptHasher{Cost: cfg.BcryptCost}
+	hasher := &usecase.BcryptHasher{Cost: cfg.BcryptCost}
 	tokens := jwt.Manager{
 		Secret: []byte(cfg.JWTSecret),
 		TTL:    cfg.JWTTTL,
@@ -49,11 +50,11 @@ func Run() {
 
 	writer, err := pkgkafka.NewWriter(cfg.KafkaBroker, cfg.KafkaTopic)
 	if err != nil {
-		log.Fatalf("init kafka writer: %v", err)
+		logger.Log.Fatalf("init kafka writer: %v", err)
 	}
 	defer func() {
 		if err := writer.Close(); err != nil {
-			log.Printf("close kafka writer: %v", err)
+			logger.Log.Infof("close kafka writer: %v", err)
 		}
 	}()
 
@@ -61,14 +62,14 @@ func Run() {
 	authSvc := usecase.NewAuthService(&userRepo, hasher, tokens, publisher)
 	handler := transportgrpc.NewAuthHandler(authSvc)
 
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(loggingUnaryServerInterceptor))
 	accountpb.RegisterAuthServiceServer(server, handler)
 	usersHandler := transportgrpc.NewUsersHandler(authSvc)
-	accountpb.RegisterUsersServiceServer(server, usersHandler)
+	accountinternalpb.RegisterUsersServiceServer(server, usersHandler)
 
 	lis, err := net.Listen("tcp", cfg.GRPCAddr)
 	if err != nil {
-		log.Fatalf("listen grpc: %v", err)
+		logger.Log.Fatalf("listen grpc: %v", err)
 	}
 
 	errCh := make(chan error, 1)
@@ -82,10 +83,10 @@ func Run() {
 	select {
 	case err := <-errCh:
 		if !errors.Is(err, grpc.ErrServerStopped) {
-			log.Fatalf("grpc serve: %v", err)
+			logger.Log.Fatalf("grpc serve: %v", err)
 		}
 	case <-sigCh:
-		log.Printf("shutting down")
+		logger.Log.Infof("shutting down")
 		gracefulStop(server, 5*time.Second)
 	}
 }
@@ -105,4 +106,15 @@ func gracefulStop(server *grpc.Server, timeout time.Duration) {
 	case <-timer.C:
 		server.Stop()
 	}
+}
+
+func loggingUnaryServerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	start := time.Now()
+	resp, err := handler(ctx, req)
+	if err != nil {
+		logger.Log.Infof("grpc request: method=%s duration=%s err=%v", info.FullMethod, time.Since(start), err)
+		return resp, err
+	}
+	logger.Log.Infof("grpc request: method=%s duration=%s ok", info.FullMethod, time.Since(start))
+	return resp, nil
 }
