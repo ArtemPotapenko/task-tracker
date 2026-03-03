@@ -14,8 +14,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"google.golang.org/grpc"
 
-	taskpb "task-tracker/gen/external/task"
-	schedulerpb "task-tracker/gen/internal/scheduler"
+	schedulerpb "task-tracker/gen/private/scheduler"
+	taskpb "task-tracker/gen/public/task"
 	"task-tracker/internal/task/config"
 	"task-tracker/internal/task/repo"
 	transportgrpc "task-tracker/internal/task/transport/grpc"

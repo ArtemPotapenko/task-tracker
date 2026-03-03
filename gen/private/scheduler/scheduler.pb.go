@@ -27,7 +27,7 @@ const file_scheduler_scheduler_proto_rawDesc = "" +
 	"\n" +
 	"\x19scheduler/scheduler.proto\x12\fscheduler.v1\x1a\x1bgoogle/protobuf/empty.proto2Z\n" +
 	"\x10SchedulerService\x12F\n" +
-	"\x14ProcessRecentExpired\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.EmptyB(Z&task-tracker/gen/internal/scheduler;schedulerpbb\x06proto3"
+	"\x14ProcessRecentExpired\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.EmptyB0Z.task-tracker/gen/private/scheduler;schedulerpbb\x06proto3"
 
 var file_scheduler_scheduler_proto_goTypes = []any{
 	(*emptypb.Empty)(nil), // 0: google.protobuf.Empty

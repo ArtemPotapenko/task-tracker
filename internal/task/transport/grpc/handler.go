@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	taskpb "task-tracker/gen/external/task"
+	taskpb "task-tracker/gen/public/task"
 	"task-tracker/internal/task/domain"
 	"task-tracker/internal/task/usecase"
 	"task-tracker/pkg/logger"

@@ -175,7 +175,7 @@ const file_account_users_proto_rawDesc = "" +
 	"\rUsersResponse\x12&\n" +
 	"\x05users\x18\x01 \x03(\v2\x10.account.v1.UserR\x05users2\\\n" +
 	"\fUsersService\x12L\n" +
-	"\rGetUsersByIDs\x12 .account.v1.GetUsersByIDsRequest\x1a\x19.account.v1.UsersResponseB$Z\"task-tracker/gen/internal/account;accountpbb\x06proto3"
+	"\rGetUsersByIDs\x12 .account.v1.GetUsersByIDsRequest\x1a\x19.account.v1.UsersResponseB,Z*task-tracker/gen/private/account;accountpbb\x06proto3"
 
 var (
 	file_account_users_proto_rawDescOnce sync.Once

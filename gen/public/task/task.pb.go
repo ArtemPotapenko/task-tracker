@@ -7,6 +7,7 @@
 package taskpb
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -465,7 +466,7 @@ var File_task_task_proto protoreflect.FileDescriptor
 
 const file_task_task_proto_rawDesc = "" +
 	"\n" +
-	"\x0ftask/task.proto\x12\atask.v1\"\xb8\x01\n" +
+	"\x0ftask/task.proto\x12\atask.v1\x1a\x1cgoogle/api/annotations.proto\"\xb8\x01\n" +
 	"\x04Task\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12 \n" +
@@ -496,13 +497,13 @@ const file_task_task_proto_rawDesc = "" +
 	"\x13TASK_STATUS_CREATED\x10\x00\x12\x17\n" +
 	"\x13TASK_STATUS_AT_WORK\x10\x01\x12\x19\n" +
 	"\x15TASK_STATUS_COMPLETED\x10\x02\x12\x17\n" +
-	"\x13TASK_STATUS_EXPIRED\x10\x032\x99\x02\n" +
-	"\vTaskService\x129\n" +
-	"\aGetTask\x12\x17.task.v1.GetTaskRequest\x1a\x15.task.v1.TaskResponse\x12A\n" +
-	"\rGetTodayTasks\x12\x18.task.v1.GetTasksRequest\x1a\x16.task.v1.TasksResponse\x12?\n" +
+	"\x13TASK_STATUS_EXPIRED\x10\x032\x82\x03\n" +
+	"\vTaskService\x12Q\n" +
+	"\aGetTask\x12\x17.task.v1.GetTaskRequest\x1a\x15.task.v1.TaskResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/v1/tasks/{id}\x12Z\n" +
+	"\rGetTodayTasks\x12\x18.task.v1.GetTasksRequest\x1a\x16.task.v1.TasksResponse\"\x17\x82\xd3\xe4\x93\x02\x11\x12\x0f/v1/tasks/today\x12U\n" +
 	"\n" +
-	"CreateTask\x12\x1a.task.v1.CreateTaskRequest\x1a\x15.task.v1.TaskResponse\x12K\n" +
-	"\x10UpdateTaskStatus\x12 .task.v1.UpdateTaskStatusRequest\x1a\x15.task.v1.TaskResponseB\x1eZ\x1ctask-tracker/gen/external/task;taskpbb\x06proto3"
+	"CreateTask\x12\x1a.task.v1.CreateTaskRequest\x1a\x15.task.v1.TaskResponse\"\x14\x82\xd3\xe4\x93\x02\x0e:\x01*\"\t/v1/tasks\x12m\n" +
+	"\x10UpdateTaskStatus\x12 .task.v1.UpdateTaskStatusRequest\x1a\x15.task.v1.TaskResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*2\x15/v1/tasks/{id}/statusB%Z#task-tracker/gen/public/task;taskpbb\x06proto3"
 
 var (
 	file_task_task_proto_rawDescOnce sync.Once

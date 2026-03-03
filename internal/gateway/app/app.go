@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	accountpb "task-tracker/gen/external/account"
-	taskpb "task-tracker/gen/external/task"
+	accountpb "task-tracker/gen/public/account"
+	taskpb "task-tracker/gen/public/task"
 	"task-tracker/internal/gateway/config"
 	"task-tracker/pkg/logger"
 )

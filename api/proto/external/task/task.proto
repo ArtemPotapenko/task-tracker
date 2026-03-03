@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package task.v1;
 
-option go_package = "task-tracker/gen/external/task;taskpb";
+option go_package = "task-tracker/gen/public/task;taskpb";
 
 import "google/api/annotations.proto";
 

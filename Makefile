@@ -9,8 +9,8 @@ EXTERNAL_PROTO_DIR := api/proto/external
 INTERNAL_PROTO_DIR := api/proto/internal
 GOOGLEAPIS_DIR := third_party/googleapis
 
-GEN_EXTERNAL_DIR := gen/external
-GEN_INTERNAL_DIR := gen/internal
+GEN_EXTERNAL_DIR := gen/public
+GEN_INTERNAL_DIR := gen/private
 
 PROTO_EXTERNAL_FILES := \
 	$(EXTERNAL_PROTO_DIR)/account/auth.proto \
@@ -29,12 +29,12 @@ tools:
 proto: proto-external proto-internal
 
 proto-external:
-	mkdir -p $(GEN_EXTERNAL_DIR)/openapi
+	mkdir -p gen/public/openapi
 	$(PROTOC) -I $(EXTERNAL_PROTO_DIR) -I $(GOOGLEAPIS_DIR) \
 		--go_out=$(GEN_EXTERNAL_DIR) --go_opt=paths=source_relative \
 		--go-grpc_out=$(GEN_EXTERNAL_DIR) --go-grpc_opt=paths=source_relative \
 		--grpc-gateway_out=$(GEN_EXTERNAL_DIR) --grpc-gateway_opt=logtostderr=true,paths=source_relative \
-		--openapiv2_out=$(GEN_EXTERNAL_DIR)/openapi --openapiv2_opt=logtostderr=true \
+		--openapiv2_out=gen/public/openapi --openapiv2_opt=logtostderr=true \
 		$(PROTO_EXTERNAL_FILES)
 
 proto-internal:
@@ -48,5 +48,5 @@ gateway: proto-external
 openapi: proto-external
 
 clean-proto:
-	rm -rf $(GEN_EXTERNAL_DIR)/account $(GEN_EXTERNAL_DIR)/task $(GEN_EXTERNAL_DIR)/openapi
+	rm -rf $(GEN_EXTERNAL_DIR)/account $(GEN_EXTERNAL_DIR)/task gen/public/openapi
 	rm -rf $(GEN_INTERNAL_DIR)/account $(GEN_INTERNAL_DIR)/scheduler

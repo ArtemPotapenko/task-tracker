@@ -1,16 +1,30 @@
 version: "3.9"
 
 services:
-  postgres:
+  postgres-account:
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: testdb
+      POSTGRES_DB: accountdb
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: secret
     ports:
       - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d testdb"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d accountdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-task:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: taskdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d taskdb"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -44,14 +58,14 @@ services:
     environment:
       GRPC_ADDR: ":50051"
       DB_DRIVER: pgx
-      DB_DSN: "postgres://admin:secret@postgres:5432/testdb?sslmode=disable"
+      DB_DSN: "postgres://admin:secret@postgres-account:5432/accountdb?sslmode=disable"
       JWT_SECRET: secret
       JWT_TTL: 12h
       BCRYPT_COST: 10
       KAFKA_BROKER: kafka:9092
       KAFKA_REGISTER_TOPIC: register
     depends_on:
-      postgres:
+      postgres-account:
         condition: service_healthy
       kafka:
         condition: service_started
@@ -67,12 +81,12 @@ services:
     environment:
       GRPC_ADDR: ":50052"
       DB_DRIVER: pgx
-      DB_DSN: "postgres://admin:secret@postgres:5432/testdb?sslmode=disable"
+      DB_DSN: "postgres://admin:secret@postgres-task:5432/taskdb?sslmode=disable"
       JWT_SECRET: secret
       KAFKA_BROKER: kafka:9092
       KAFKA_TOPIC: task-expired-summary
     depends_on:
-      postgres:
+      postgres-task:
         condition: service_healthy
       kafka:
         condition: service_started

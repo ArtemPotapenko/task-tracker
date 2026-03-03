@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	accountpb "task-tracker/gen/internal/account"
+	accountpb "task-tracker/gen/private/account"
 	"task-tracker/internal/account/domain"
 	"task-tracker/internal/account/usecase"
 	"task-tracker/pkg/logger"

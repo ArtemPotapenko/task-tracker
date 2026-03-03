@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	schedulerpb "task-tracker/gen/internal/scheduler"
+	schedulerpb "task-tracker/gen/private/scheduler"
 	"task-tracker/internal/task/domain"
 	"task-tracker/internal/task/usecase"
 	"task-tracker/pkg/logger"

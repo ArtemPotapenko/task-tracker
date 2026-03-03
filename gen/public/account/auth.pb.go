@@ -7,6 +7,7 @@
 package accountpb
 
 import (
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -182,7 +183,7 @@ var File_account_auth_proto protoreflect.FileDescriptor
 const file_account_auth_proto_rawDesc = "" +
 	"\n" +
 	"\x12account/auth.proto\x12\n" +
-	"account.v1\"l\n" +
+	"account.v1\x1a\x1cgoogle/api/annotations.proto\"l\n" +
 	"\x0fRegisterRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12'\n" +
@@ -191,10 +192,10 @@ const file_account_auth_proto_rawDesc = "" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\" \n" +
 	"\fAuthResponse\x12\x10\n" +
-	"\x03jwt\x18\x01 \x01(\tR\x03jwt2\x8d\x01\n" +
-	"\vAuthService\x12A\n" +
-	"\bRegister\x12\x1b.account.v1.RegisterRequest\x1a\x18.account.v1.AuthResponse\x12;\n" +
-	"\x05Login\x12\x18.account.v1.LoginRequest\x1a\x18.account.v1.AuthResponseB$Z\"task-tracker/gen/external/account;accountpbb\x06proto3"
+	"\x03jwt\x18\x01 \x01(\tR\x03jwt2\xc6\x01\n" +
+	"\vAuthService\x12_\n" +
+	"\bRegister\x12\x1b.account.v1.RegisterRequest\x1a\x18.account.v1.AuthResponse\"\x1c\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/auth/register\x12V\n" +
+	"\x05Login\x12\x18.account.v1.LoginRequest\x1a\x18.account.v1.AuthResponse\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/v1/auth/loginB+Z)task-tracker/gen/public/account;accountpbb\x06proto3"
 
 var (
 	file_account_auth_proto_rawDescOnce sync.Once

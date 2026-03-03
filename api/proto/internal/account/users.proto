@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package account.v1;
 
-option go_package = "task-tracker/gen/internal/account;accountpb";
+option go_package = "task-tracker/gen/private/account;accountpb";
 
 message User {
   int64 id = 1;

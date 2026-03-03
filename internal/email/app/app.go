@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	accountpb "task-tracker/gen/internal/account"
+	accountpb "task-tracker/gen/private/account"
 	"task-tracker/internal/email/config"
 	"task-tracker/internal/email/mailer"
 	transportgrpc "task-tracker/internal/email/transport/grpc"

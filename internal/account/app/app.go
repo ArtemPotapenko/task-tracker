@@ -14,8 +14,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"google.golang.org/grpc"
 
-	accountpb "task-tracker/gen/external/account"
-	accountinternalpb "task-tracker/gen/internal/account"
+	accountinternalpb "task-tracker/gen/private/account"
+	accountpb "task-tracker/gen/public/account"
 	"task-tracker/internal/account/config"
 	"task-tracker/internal/account/repo"
 	transportgrpc "task-tracker/internal/account/transport/grpc"
