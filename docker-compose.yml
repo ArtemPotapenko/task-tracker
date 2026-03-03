@@ -143,7 +143,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       args:
-        SERVICE: cmd/http-gateway
+        SERVICE: cmd/gateway
     environment:
       GATEWAY_HTTP_ADDR: ":8080"
       ACCOUNT_GRPC_ADDR: account-service:50051
