@@ -1,4 +1,4 @@
-// Copyright 2017 Google LLC
+// Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,8 +24,6 @@ message Http {
 }
 
 message HttpRule {
-  string selector = 1;
-
   oneof pattern {
     string get = 2;
     string put = 3;
@@ -35,6 +33,7 @@ message HttpRule {
     CustomHttpPattern custom = 8;
   }
 
+  string selector = 1;
   string body = 7;
   string response_body = 12;
   repeated HttpRule additional_bindings = 11;

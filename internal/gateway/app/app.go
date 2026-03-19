@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,10 +19,10 @@ import (
 	"task-tracker/pkg/logger"
 )
 
-func Run() {
+func Run() error {
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Log.Fatalf("load config: %v", err)
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -32,7 +33,7 @@ func Run() {
 
 	accountConn, err := grpc.NewClient(cfg.AccountGRPCAddr, dialOpts...)
 	if err != nil {
-		logger.Log.Fatalf("dial account grpc: %v", err)
+		return fmt.Errorf("dial account grpc: %w", err)
 	}
 	defer func() {
 		if err := accountConn.Close(); err != nil {
@@ -42,7 +43,7 @@ func Run() {
 
 	taskConn, err := grpc.NewClient(cfg.TaskGRPCAddr, dialOpts...)
 	if err != nil {
-		logger.Log.Fatalf("dial task grpc: %v", err)
+		return fmt.Errorf("dial task grpc: %w", err)
 	}
 	defer func() {
 		if err := taskConn.Close(); err != nil {
@@ -51,10 +52,10 @@ func Run() {
 	}()
 
 	if err := accountpb.RegisterAuthServiceHandler(ctx, mux, accountConn); err != nil {
-		logger.Log.Fatalf("register auth handler: %v", err)
+		return fmt.Errorf("register auth handler: %w", err)
 	}
 	if err := taskpb.RegisterTaskServiceHandler(ctx, mux, taskConn); err != nil {
-		logger.Log.Fatalf("register task handler: %v", err)
+		return fmt.Errorf("register task handler: %w", err)
 	}
 
 	server := &http.Server{
@@ -75,7 +76,7 @@ func Run() {
 	select {
 	case err := <-errCh:
 		if err != nil && err != http.ErrServerClosed {
-			logger.Log.Fatalf("gateway serve: %v", err)
+			return fmt.Errorf("gateway serve: %w", err)
 		}
 	case <-sigCh:
 		logger.Log.Infof("gateway shutting down")
@@ -86,4 +87,6 @@ func Run() {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Log.Infof("gateway shutdown: %v", err)
 	}
+
+	return nil
 }

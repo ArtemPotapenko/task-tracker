@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -25,15 +26,15 @@ import (
 	pkgkafka "task-tracker/pkg/kafka"
 )
 
-func Run() {
+func Run() error {
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Log.Fatalf("load config: %v", err)
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	dbConn, err := db.Open(context.Background(), cfg.DBDriver, cfg.DBDSN, 5*time.Second)
 	if err != nil {
-		logger.Log.Fatalf("open db: %v", err)
+		return fmt.Errorf("open db: %w", err)
 	}
 	defer func() {
 		if err := dbConn.Close(); err != nil {
@@ -50,7 +51,7 @@ func Run() {
 
 	writer, err := pkgkafka.NewWriter(cfg.KafkaBroker, cfg.KafkaTopic)
 	if err != nil {
-		logger.Log.Fatalf("init kafka writer: %v", err)
+		return fmt.Errorf("init kafka writer: %w", err)
 	}
 	defer func() {
 		if err := writer.Close(); err != nil {
@@ -69,7 +70,7 @@ func Run() {
 
 	lis, err := net.Listen("tcp", cfg.GRPCAddr)
 	if err != nil {
-		logger.Log.Fatalf("listen grpc: %v", err)
+		return fmt.Errorf("listen grpc: %w", err)
 	}
 
 	errCh := make(chan error, 1)
@@ -83,12 +84,14 @@ func Run() {
 	select {
 	case err := <-errCh:
 		if !errors.Is(err, grpc.ErrServerStopped) {
-			logger.Log.Fatalf("grpc serve: %v", err)
+			return fmt.Errorf("grpc serve: %w", err)
 		}
 	case <-sigCh:
 		logger.Log.Infof("shutting down")
 		gracefulStop(server, 5*time.Second)
 	}
+
+	return nil
 }
 
 func gracefulStop(server *grpc.Server, timeout time.Duration) {

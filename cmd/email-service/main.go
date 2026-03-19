@@ -1,7 +1,12 @@
 package main
 
-import "task-tracker/internal/email/app"
+import (
+	"task-tracker/internal/email/app"
+	"task-tracker/pkg/logger"
+)
 
 func main() {
-	app.Run()
+	if err := app.Run(); err != nil {
+		logger.Log.Fatalf("email service: %v", err)
+	}
 }

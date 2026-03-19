@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,15 +18,15 @@ import (
 	"task-tracker/pkg/logger"
 )
 
-func Run() {
+func Run() error {
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Log.Fatalf("load config: %v", err)
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	conn, err := grpc.NewClient(cfg.TaskGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		logger.Log.Fatalf("dial task grpc: %v", err)
+		return fmt.Errorf("dial task grpc: %w", err)
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
@@ -65,7 +66,7 @@ func Run() {
 		case <-ticker.C:
 			run()
 		case <-sigCh:
-			return
+			return nil
 		}
 	}
 }

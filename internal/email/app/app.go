@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,20 +24,20 @@ import (
 	pkgkafka "task-tracker/pkg/kafka"
 )
 
-func Run() {
+func Run() error {
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Log.Fatalf("load config: %v", err)
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	mailerClient, err := mailer.NewSMTPMailer(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.SMTPUseTLS, cfg.Timeout)
 	if err != nil {
-		logger.Log.Fatalf("init smtp: %v", err)
+		return fmt.Errorf("init smtp: %w", err)
 	}
 
 	redisClient, err := pkgcache.NewClient(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB, cfg.Timeout)
 	if err != nil {
-		logger.Log.Fatalf("init redis: %v", err)
+		return fmt.Errorf("init redis: %w", err)
 	}
 	defer func() {
 		if err := redisClient.Close(); err != nil {
@@ -50,7 +51,7 @@ func Run() {
 
 	accountConn, err := grpc.NewClient(cfg.AccountGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		logger.Log.Fatalf("dial account grpc: %v", err)
+		return fmt.Errorf("dial account grpc: %w", err)
 	}
 	defer func() {
 		if err := accountConn.Close(); err != nil {
@@ -61,13 +62,13 @@ func Run() {
 
 	registerReader, err := pkgkafka.NewReader(cfg.KafkaBroker, cfg.RegisterTopic, cfg.GroupID+"-register")
 	if err != nil {
-		logger.Log.Fatalf("init register reader: %v", err)
+		return fmt.Errorf("init register reader: %w", err)
 	}
 	defer registerReader.Close()
 
 	dailyReader, err := pkgkafka.NewReader(cfg.KafkaBroker, cfg.DailySummaryTopic, cfg.GroupID+"-daily")
 	if err != nil {
-		logger.Log.Fatalf("init daily reader: %v", err)
+		return fmt.Errorf("init daily reader: %w", err)
 	}
 	defer dailyReader.Close()
 
@@ -87,9 +88,12 @@ func Run() {
 	case err := <-errCh:
 		if err != nil {
 			logger.Log.Infof("consumer error: %v", err)
+			return fmt.Errorf("consumer error: %w", err)
 		}
 		cancel()
 	}
+
+	return nil
 }
 
 type readerAdapter struct {

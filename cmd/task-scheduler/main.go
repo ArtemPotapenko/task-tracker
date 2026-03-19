@@ -1,7 +1,12 @@
 package main
 
-import "task-tracker/internal/scheduler/app"
+import (
+	"task-tracker/internal/scheduler/app"
+	"task-tracker/pkg/logger"
+)
 
 func main() {
-	app.Run()
+	if err := app.Run(); err != nil {
+		logger.Log.Fatalf("scheduler: %v", err)
+	}
 }
