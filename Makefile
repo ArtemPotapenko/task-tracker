@@ -7,6 +7,7 @@ PROTOC ?= protoc
 GOOSE ?= goose
 GO ?= go
 GOLANGCI_LINT ?= golangci-lint
+GOLANGCI_LINT_VERSION ?= v1.64.8
 
 ACCOUNT_DB_DSN ?= postgres://admin:secret@localhost:5433/accountdb?sslmode=disable
 TASK_DB_DSN ?= postgres://admin:secret@localhost:5434/taskdb?sslmode=disable
@@ -39,6 +40,7 @@ tools:
 	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.22.0
 	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.22.0
 	go install github.com/pressly/goose/v3/cmd/goose@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 proto: proto-external proto-internal
 

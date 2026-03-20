@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os"
 	"sync/atomic"
@@ -31,7 +32,7 @@ func TestRun(t *testing.T) {
 		t.Fatalf("Listen() error = %v", err)
 	}
 	t.Cleanup(func() {
-		if err := lis.Close(); err != nil {
+		if err := lis.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
 			t.Errorf("Close() error = %v", err)
 		}
 	})

@@ -38,11 +38,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install Tools
+        run: make tools
+
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.64.8
-          args: ./...
+        run: make lint
 
   unit:
     name: Unit Tests
