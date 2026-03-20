@@ -64,13 +64,21 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("init register reader: %w", err)
 	}
-	defer registerReader.Close()
+	defer func() {
+		if err := registerReader.Close(); err != nil {
+			logger.Log.Infof("close register reader: %v", err)
+		}
+	}()
 
 	dailyReader, err := pkgkafka.NewReader(cfg.KafkaBroker, cfg.DailySummaryTopic, cfg.GroupID+"-daily")
 	if err != nil {
 		return fmt.Errorf("init daily reader: %w", err)
 	}
-	defer dailyReader.Close()
+	defer func() {
+		if err := dailyReader.Close(); err != nil {
+			logger.Log.Infof("close daily reader: %v", err)
+		}
+	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

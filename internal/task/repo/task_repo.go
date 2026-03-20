@@ -118,7 +118,11 @@ func (r *TaskRepository) GetByDueDateBetween(ctx context.Context, from, to time.
 	if err != nil {
 		return nil, fmt.Errorf("select tasks: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			logger.Log.Infof("close rows: %v", err)
+		}
+	}()
 
 	var tasks []domain.Task
 	for rows.Next() {
@@ -158,7 +162,11 @@ func (r *TaskRepository) GetByUserIDAndDueDateBetween(ctx context.Context, userI
 	if err != nil {
 		return nil, fmt.Errorf("select tasks: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			logger.Log.Infof("close rows: %v", err)
+		}
+	}()
 
 	var tasks []domain.Task
 	for rows.Next() {
@@ -198,7 +206,11 @@ func (r *TaskRepository) GetByDueDateBetweenAndStatusNot(ctx context.Context, fr
 	if err != nil {
 		return nil, fmt.Errorf("select tasks: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			logger.Log.Infof("close rows: %v", err)
+		}
+	}()
 
 	var tasks []domain.Task
 	for rows.Next() {

@@ -80,7 +80,11 @@ func (r *UserRepository) GetByIDs(ctx context.Context, ids []int64) ([]domain.Us
 	if err != nil {
 		return nil, fmt.Errorf("select users: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			logger.Log.Infof("close rows: %v", err)
+		}
+	}()
 
 	var users []domain.User
 	for rows.Next() {

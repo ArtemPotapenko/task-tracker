@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/smtp"
 	"strings"
+	"task-tracker/pkg/logger"
 	"time"
 )
 
@@ -43,13 +44,21 @@ func (m *SMTPMailer) Send(to, subject, body string) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			logger.Log.Infof("close smtp conn: %v", err)
+		}
+	}()
 
 	client, err := smtp.NewClient(conn, m.host)
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			logger.Log.Infof("close smtp client: %v", err)
+		}
+	}()
 
 	if err := client.Auth(auth); err != nil {
 		return err

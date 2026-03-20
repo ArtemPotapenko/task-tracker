@@ -30,7 +30,11 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Listen() error = %v", err)
 	}
-	defer lis.Close()
+	t.Cleanup(func() {
+		if err := lis.Close(); err != nil {
+			t.Errorf("Close() error = %v", err)
+		}
+	})
 
 	serverImpl := &testSchedulerServer{}
 	server := grpc.NewServer()
