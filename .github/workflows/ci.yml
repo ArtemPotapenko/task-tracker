@@ -38,15 +38,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Setup golangci-lint
+      - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
-          install-mode: binary
-          args: --version
-
-      - name: Run Lint
-        run: make lint
+          version: v1.64.8
+          args: ./...
 
   unit:
     name: Unit Tests
