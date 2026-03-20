@@ -11,7 +11,7 @@ import (
 
 func TestTaskRepositoryIntegration(t *testing.T) {
 	db := testutil.StartPostgres(t, "taskdb")
-	testutil.ApplyGooseUpSQL(t, db, "../../../migrations/task/00001_create_tasks.sql")
+	testutil.ApplyUpSQL(t, db, "../../../migrations/task/00001_create_tasks.sql")
 
 	if _, err := db.Exec("TRUNCATE TABLE tasks RESTART IDENTITY"); err != nil {
 		t.Fatalf("TRUNCATE tasks error = %v", err)

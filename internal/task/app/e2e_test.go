@@ -9,6 +9,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -123,6 +124,10 @@ func (taskTestPublisher) PublishExpiredSummary(ctx context.Context, summary usec
 	return nil
 }
 
+func taskAuthContext() context.Context {
+	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer jwt-user-1"))
+}
+
 func TestTaskServiceE2E(t *testing.T) {
 	repo := newMemoryTaskRepo()
 	svc := usecase.NewTaskService(repo, taskTestTokenParser{}, taskTestPublisher{})
@@ -154,8 +159,7 @@ func TestTaskServiceE2E(t *testing.T) {
 	taskClient := taskpb.NewTaskServiceClient(conn)
 	schedulerClient := schedulerpb.NewSchedulerServiceClient(conn)
 
-	createResp, err := taskClient.CreateTask(context.Background(), &taskpb.CreateTaskRequest{
-		Jwt:         "jwt-user-1",
+	createResp, err := taskClient.CreateTask(taskAuthContext(), &taskpb.CreateTaskRequest{
 		Description: "ship feature",
 		DueDate:     time.Now().Add(time.Hour).Unix(),
 	})
@@ -166,9 +170,8 @@ func TestTaskServiceE2E(t *testing.T) {
 		t.Fatalf("CreateTask() id = 0, want non-zero")
 	}
 
-	getResp, err := taskClient.GetTask(context.Background(), &taskpb.GetTaskRequest{
-		Jwt: "jwt-user-1",
-		Id:  createResp.GetTask().GetId(),
+	getResp, err := taskClient.GetTask(taskAuthContext(), &taskpb.GetTaskRequest{
+		Id: createResp.GetTask().GetId(),
 	})
 	if err != nil {
 		t.Fatalf("GetTask() error = %v", err)
@@ -177,9 +180,7 @@ func TestTaskServiceE2E(t *testing.T) {
 		t.Fatalf("GetTask() description = %q", getResp.GetTask().GetDescription())
 	}
 
-	todayResp, err := taskClient.GetTodayTasks(context.Background(), &taskpb.GetTasksRequest{
-		Jwt: "jwt-user-1",
-	})
+	todayResp, err := taskClient.GetTodayTasks(taskAuthContext(), &taskpb.GetTasksRequest{})
 	if err != nil {
 		t.Fatalf("GetTodayTasks() error = %v", err)
 	}
@@ -187,8 +188,7 @@ func TestTaskServiceE2E(t *testing.T) {
 		t.Fatalf("GetTodayTasks() returned no tasks")
 	}
 
-	updateResp, err := taskClient.UpdateTaskStatus(context.Background(), &taskpb.UpdateTaskStatusRequest{
-		Jwt:    "jwt-user-1",
+	updateResp, err := taskClient.UpdateTaskStatus(taskAuthContext(), &taskpb.UpdateTaskStatusRequest{
 		Id:     createResp.GetTask().GetId(),
 		Status: taskpb.TaskStatus_TASK_STATUS_COMPLETED,
 	})

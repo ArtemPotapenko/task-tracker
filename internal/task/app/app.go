@@ -42,6 +42,10 @@ func Run() error {
 		}
 	}()
 
+	if err := db.UpSQL(dbConn, "migrations/task/00001_create_tasks.sql"); err != nil {
+		return fmt.Errorf("run task migrations: %w", err)
+	}
+
 	taskRepo := repo.NewTaskRepository(dbConn)
 	parser := pkgjwt.Parser{Secret: []byte(cfg.JWTSecret)}
 

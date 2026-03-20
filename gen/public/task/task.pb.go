@@ -160,8 +160,7 @@ func (x *Task) GetDueDate() int64 {
 
 type GetTaskRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Jwt           string                 `protobuf:"bytes,1,opt,name=jwt,proto3" json:"jwt,omitempty"`
-	Id            int64                  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -196,13 +195,6 @@ func (*GetTaskRequest) Descriptor() ([]byte, []int) {
 	return file_task_task_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GetTaskRequest) GetJwt() string {
-	if x != nil {
-		return x.Jwt
-	}
-	return ""
-}
-
 func (x *GetTaskRequest) GetId() int64 {
 	if x != nil {
 		return x.Id
@@ -212,7 +204,6 @@ func (x *GetTaskRequest) GetId() int64 {
 
 type GetTasksRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Jwt           string                 `protobuf:"bytes,1,opt,name=jwt,proto3" json:"jwt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -247,18 +238,10 @@ func (*GetTasksRequest) Descriptor() ([]byte, []int) {
 	return file_task_task_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *GetTasksRequest) GetJwt() string {
-	if x != nil {
-		return x.Jwt
-	}
-	return ""
-}
-
 type CreateTaskRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Jwt           string                 `protobuf:"bytes,1,opt,name=jwt,proto3" json:"jwt,omitempty"`
-	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	DueDate       int64                  `protobuf:"varint,3,opt,name=due_date,json=dueDate,proto3" json:"due_date,omitempty"`
+	Description   string                 `protobuf:"bytes,1,opt,name=description,proto3" json:"description,omitempty"`
+	DueDate       int64                  `protobuf:"varint,2,opt,name=due_date,json=dueDate,proto3" json:"due_date,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -293,13 +276,6 @@ func (*CreateTaskRequest) Descriptor() ([]byte, []int) {
 	return file_task_task_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *CreateTaskRequest) GetJwt() string {
-	if x != nil {
-		return x.Jwt
-	}
-	return ""
-}
-
 func (x *CreateTaskRequest) GetDescription() string {
 	if x != nil {
 		return x.Description
@@ -316,9 +292,8 @@ func (x *CreateTaskRequest) GetDueDate() int64 {
 
 type UpdateTaskStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Jwt           string                 `protobuf:"bytes,1,opt,name=jwt,proto3" json:"jwt,omitempty"`
-	Id            int64                  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`
-	Status        TaskStatus             `protobuf:"varint,3,opt,name=status,proto3,enum=task.v1.TaskStatus" json:"status,omitempty"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Status        TaskStatus             `protobuf:"varint,2,opt,name=status,proto3,enum=task.v1.TaskStatus" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -351,13 +326,6 @@ func (x *UpdateTaskStatusRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use UpdateTaskStatusRequest.ProtoReflect.Descriptor instead.
 func (*UpdateTaskStatusRequest) Descriptor() ([]byte, []int) {
 	return file_task_task_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *UpdateTaskStatusRequest) GetJwt() string {
-	if x != nil {
-		return x.Jwt
-	}
-	return ""
 }
 
 func (x *UpdateTaskStatusRequest) GetId() int64 {
@@ -474,20 +442,16 @@ const file_task_task_proto_rawDesc = "" +
 	"\x06status\x18\x04 \x01(\x0e2\x13.task.v1.TaskStatusR\x06status\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x05 \x01(\x03R\tcreatedAt\x12\x19\n" +
-	"\bdue_date\x18\x06 \x01(\x03R\adueDate\"2\n" +
-	"\x0eGetTaskRequest\x12\x10\n" +
-	"\x03jwt\x18\x01 \x01(\tR\x03jwt\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\x03R\x02id\"#\n" +
-	"\x0fGetTasksRequest\x12\x10\n" +
-	"\x03jwt\x18\x01 \x01(\tR\x03jwt\"b\n" +
-	"\x11CreateTaskRequest\x12\x10\n" +
-	"\x03jwt\x18\x01 \x01(\tR\x03jwt\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x19\n" +
-	"\bdue_date\x18\x03 \x01(\x03R\adueDate\"h\n" +
-	"\x17UpdateTaskStatusRequest\x12\x10\n" +
-	"\x03jwt\x18\x01 \x01(\tR\x03jwt\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\x03R\x02id\x12+\n" +
-	"\x06status\x18\x03 \x01(\x0e2\x13.task.v1.TaskStatusR\x06status\"1\n" +
+	"\bdue_date\x18\x06 \x01(\x03R\adueDate\" \n" +
+	"\x0eGetTaskRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"\x11\n" +
+	"\x0fGetTasksRequest\"P\n" +
+	"\x11CreateTaskRequest\x12 \n" +
+	"\vdescription\x18\x01 \x01(\tR\vdescription\x12\x19\n" +
+	"\bdue_date\x18\x02 \x01(\x03R\adueDate\"V\n" +
+	"\x17UpdateTaskStatusRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12+\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x13.task.v1.TaskStatusR\x06status\"1\n" +
 	"\fTaskResponse\x12!\n" +
 	"\x04task\x18\x01 \x01(\v2\r.task.v1.TaskR\x04task\"4\n" +
 	"\rTasksResponse\x12#\n" +

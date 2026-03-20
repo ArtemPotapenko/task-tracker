@@ -1,4 +1,4 @@
-.PHONY: tools proto proto-external proto-internal gateway openapi clean-proto migrate-account-up migrate-account-down migrate-task-up migrate-task-down test-unit test-integration test-e2e
+.PHONY: tools proto proto-external proto-internal gateway openapi clean-proto migrate-account-up migrate-account-down migrate-task-up migrate-task-down test-unit test-integration test-e2e build lint
 
 GOPATH := $(shell go env GOPATH)
 export PATH := $(GOPATH)/bin:$(PATH)
@@ -6,6 +6,7 @@ export PATH := $(GOPATH)/bin:$(PATH)
 PROTOC ?= protoc
 GOOSE ?= goose
 GO ?= go
+GOLANGCI_LINT ?= golangci-lint
 
 ACCOUNT_DB_DSN ?= postgres://admin:secret@localhost:5433/accountdb?sslmode=disable
 TASK_DB_DSN ?= postgres://admin:secret@localhost:5434/taskdb?sslmode=disable
@@ -84,3 +85,9 @@ test-integration:
 
 test-e2e:
 	env GOCACHE=$(GOCACHE) $(GO) test $(E2E_TEST_PKGS)
+
+build:
+	env GOCACHE=$(GOCACHE) $(GO) build ./...
+
+lint:
+	env GOCACHE=$(GOCACHE) $(GOLANGCI_LINT) run ./...

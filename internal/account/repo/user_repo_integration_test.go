@@ -10,7 +10,7 @@ import (
 
 func TestUserRepositoryIntegration(t *testing.T) {
 	db := testutil.StartPostgres(t, "accountdb")
-	testutil.ApplyGooseUpSQL(t, db, "../../../migrations/account/00001_create_users.sql")
+	testutil.ApplyUpSQL(t, db, "../../../migrations/account/00001_create_users.sql")
 
 	if _, err := db.Exec("TRUNCATE TABLE users RESTART IDENTITY"); err != nil {
 		t.Fatalf("TRUNCATE users error = %v", err)

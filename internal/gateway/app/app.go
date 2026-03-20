@@ -17,6 +17,7 @@ import (
 	taskpb "task-tracker/gen/public/task"
 	"task-tracker/internal/gateway/config"
 	"task-tracker/pkg/logger"
+	"task-tracker/pkg/openapiui"
 )
 
 func Run() error {
@@ -28,7 +29,7 @@ func Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mux := runtime.NewServeMux()
+	gatewayMux := runtime.NewServeMux()
 	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
 	accountConn, err := grpc.NewClient(cfg.AccountGRPCAddr, dialOpts...)
@@ -51,16 +52,20 @@ func Run() error {
 		}
 	}()
 
-	if err := accountpb.RegisterAuthServiceHandler(ctx, mux, accountConn); err != nil {
+	if err := accountpb.RegisterAuthServiceHandler(ctx, gatewayMux, accountConn); err != nil {
 		return fmt.Errorf("register auth handler: %w", err)
 	}
-	if err := taskpb.RegisterTaskServiceHandler(ctx, mux, taskConn); err != nil {
+	if err := taskpb.RegisterTaskServiceHandler(ctx, gatewayMux, taskConn); err != nil {
 		return fmt.Errorf("register task handler: %w", err)
 	}
 
+	handler := http.NewServeMux()
+	openapiui.Mount(handler, cfg.OpenAPIDir)
+	handler.Handle("/", gatewayMux)
+
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

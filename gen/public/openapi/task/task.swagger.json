@@ -65,14 +65,6 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "jwt",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          }
-        ],
         "tags": [
           "TaskService"
         ]
@@ -102,12 +94,6 @@
             "required": true,
             "type": "string",
             "format": "int64"
-          },
-          {
-            "name": "jwt",
-            "in": "query",
-            "required": false,
-            "type": "string"
           }
         ],
         "tags": [
@@ -159,9 +145,6 @@
     "TaskServiceUpdateTaskStatusBody": {
       "type": "object",
       "properties": {
-        "jwt": {
-          "type": "string"
-        },
         "status": {
           "$ref": "#/definitions/v1TaskStatus"
         }
@@ -198,9 +181,6 @@
     "v1CreateTaskRequest": {
       "type": "object",
       "properties": {
-        "jwt": {
-          "type": "string"
-        },
         "description": {
           "type": "string"
         },

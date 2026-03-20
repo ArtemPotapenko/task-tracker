@@ -23,24 +23,19 @@ message Task {
 }
 
 message GetTaskRequest {
-  string jwt = 1;
-  int64 id = 2;
+  int64 id = 1;
 }
 
-message GetTasksRequest {
-  string jwt = 1;
-}
+message GetTasksRequest {}
 
 message CreateTaskRequest {
-  string jwt = 1;
-  string description = 2;
-  int64 due_date = 3;
+  string description = 1;
+  int64 due_date = 2;
 }
 
 message UpdateTaskStatusRequest {
-  string jwt = 1;
-  int64 id = 2;
-  TaskStatus status = 3;
+  int64 id = 1;
+  TaskStatus status = 2;
 }
 
 message TaskResponse {

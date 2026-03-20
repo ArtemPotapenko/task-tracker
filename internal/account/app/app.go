@@ -42,6 +42,10 @@ func Run() error {
 		}
 	}()
 
+	if err := db.UpSQL(dbConn, "migrations/account/00001_create_users.sql"); err != nil {
+		return fmt.Errorf("run account migrations: %w", err)
+	}
+
 	userRepo := repo.NewUserRepository(dbConn)
 	hasher := &usecase.BcryptHasher{Cost: cfg.BcryptCost}
 	tokens := jwt.Manager{

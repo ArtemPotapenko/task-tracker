@@ -10,6 +10,7 @@ type Config struct {
 	HTTPAddr        string
 	AccountGRPCAddr string
 	TaskGRPCAddr    string
+	OpenAPIDir      string
 	ShutdownTimeout time.Duration
 }
 
@@ -23,6 +24,7 @@ func Load() (Config, error) {
 		HTTPAddr:        env.GetEnvOrDefault("GATEWAY_HTTP_ADDR", ":8080"),
 		AccountGRPCAddr: env.GetEnvOrDefault("ACCOUNT_GRPC_ADDR", ":50051"),
 		TaskGRPCAddr:    env.GetEnvOrDefault("TASK_GRPC_ADDR", ":50052"),
+		OpenAPIDir:      env.GetEnvOrDefault("GATEWAY_OPENAPI_DIR", "gen/public/openapi"),
 		ShutdownTimeout: timeout,
 	}
 	return cfg, nil

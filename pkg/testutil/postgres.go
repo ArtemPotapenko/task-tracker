@@ -3,13 +3,12 @@ package testutil
 import (
 	"context"
 	"database/sql"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	postgrescontainer "github.com/testcontainers/testcontainers-go/modules/postgres"
+	pkgdb "task-tracker/pkg/db"
 )
 
 func StartPostgres(t *testing.T, dbName string) *sql.DB {
@@ -63,24 +62,10 @@ func StartPostgres(t *testing.T, dbName string) *sql.DB {
 	return db
 }
 
-func ApplyGooseUpSQL(t *testing.T, db *sql.DB, path string) {
+func ApplyUpSQL(t *testing.T, db *sql.DB, path string) {
 	t.Helper()
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("ReadFile(%q) error = %v", path, err)
-	}
-
-	content := string(data)
-	upPart, _, _ := strings.Cut(content, "-- +goose Down")
-	upPart = strings.Replace(upPart, "-- +goose Up", "", 1)
-	upPart = strings.TrimSpace(upPart)
-
-	if upPart == "" {
-		t.Fatalf("migration %q has empty up section", path)
-	}
-
-	if _, err := db.Exec(upPart); err != nil {
-		t.Fatalf("Exec(up migration %q) error = %v", path, err)
+	if err := pkgdb.UpSQL(db, path); err != nil {
+		t.Fatalf("ApplyUpSQL(%q) error = %v", path, err)
 	}
 }

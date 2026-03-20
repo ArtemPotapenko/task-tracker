@@ -3,9 +3,11 @@ package grpc
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	taskpb "task-tracker/gen/public/task"
@@ -24,12 +26,13 @@ func NewTaskHandler(svc *usecase.TaskService) *TaskHandler {
 }
 
 func (h *TaskHandler) GetTask(ctx context.Context, req *taskpb.GetTaskRequest) (*taskpb.TaskResponse, error) {
-	if req.GetJwt() == "" {
+	token, err := extractTaskToken(ctx)
+	if err != nil {
 		logger.Log.Infof("grpc get task: missing token")
 		return nil, status.Error(codes.Unauthenticated, "missing token")
 	}
 
-	task, err := h.svc.GetByID(ctx, req.GetJwt(), req.GetId())
+	task, err := h.svc.GetByID(ctx, token, req.GetId())
 	if err != nil {
 		return nil, mapTaskError(err)
 	}
@@ -37,12 +40,13 @@ func (h *TaskHandler) GetTask(ctx context.Context, req *taskpb.GetTaskRequest) (
 }
 
 func (h *TaskHandler) GetTodayTasks(ctx context.Context, req *taskpb.GetTasksRequest) (*taskpb.TasksResponse, error) {
-	if req.GetJwt() == "" {
+	token, err := extractTaskToken(ctx)
+	if err != nil {
 		logger.Log.Infof("grpc get today: missing token")
 		return nil, status.Error(codes.Unauthenticated, "missing token")
 	}
 
-	tasks, err := h.svc.GetToday(ctx, req.GetJwt())
+	tasks, err := h.svc.GetToday(ctx, token)
 	if err != nil {
 		return nil, mapTaskError(err)
 	}
@@ -50,7 +54,8 @@ func (h *TaskHandler) GetTodayTasks(ctx context.Context, req *taskpb.GetTasksReq
 }
 
 func (h *TaskHandler) CreateTask(ctx context.Context, req *taskpb.CreateTaskRequest) (*taskpb.TaskResponse, error) {
-	if req.GetJwt() == "" {
+	token, err := extractTaskToken(ctx)
+	if err != nil {
 		logger.Log.Infof("grpc create task: missing token")
 		return nil, status.Error(codes.Unauthenticated, "missing token")
 	}
@@ -60,7 +65,7 @@ func (h *TaskHandler) CreateTask(ctx context.Context, req *taskpb.CreateTaskRequ
 	}
 
 	dueDate := time.Unix(req.GetDueDate(), 0)
-	task, err := h.svc.Create(ctx, req.GetJwt(), req.GetDescription(), dueDate)
+	task, err := h.svc.Create(ctx, token, req.GetDescription(), dueDate)
 	if err != nil {
 		return nil, mapTaskError(err)
 	}
@@ -68,7 +73,8 @@ func (h *TaskHandler) CreateTask(ctx context.Context, req *taskpb.CreateTaskRequ
 }
 
 func (h *TaskHandler) UpdateTaskStatus(ctx context.Context, req *taskpb.UpdateTaskStatusRequest) (*taskpb.TaskResponse, error) {
-	if req.GetJwt() == "" {
+	token, err := extractTaskToken(ctx)
+	if err != nil {
 		logger.Log.Infof("grpc update task status: missing token")
 		return nil, status.Error(codes.Unauthenticated, "missing token")
 	}
@@ -79,11 +85,38 @@ func (h *TaskHandler) UpdateTaskStatus(ctx context.Context, req *taskpb.UpdateTa
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	task, err := h.svc.UpdateStatus(ctx, req.GetJwt(), req.GetId(), statusValue)
+	task, err := h.svc.UpdateStatus(ctx, token, req.GetId(), statusValue)
 	if err != nil {
 		return nil, mapTaskError(err)
 	}
 	return &taskpb.TaskResponse{Task: toProtoTask(task)}, nil
+}
+
+func extractTaskToken(ctx context.Context) (string, error) {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		values := md.Get("authorization")
+		for _, value := range values {
+			if token, ok := parseBearerToken(value); ok {
+				return token, nil
+			}
+		}
+	}
+	return "", errors.New("missing token")
+}
+
+func parseBearerToken(value string) (string, bool) {
+	value = strings.TrimSpace(value)
+	if len(value) < len("Bearer ")+1 {
+		return "", false
+	}
+	if !strings.EqualFold(value[:len("Bearer ")], "Bearer ") {
+		return "", false
+	}
+	token := strings.TrimSpace(value[len("Bearer "):])
+	if token == "" {
+		return "", false
+	}
+	return token, true
 }
 
 func toDomainStatus(status taskpb.TaskStatus) (domain.TaskStatus, error) {
