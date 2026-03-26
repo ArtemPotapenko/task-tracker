@@ -59,10 +59,6 @@ func (h *TaskHandler) CreateTask(ctx context.Context, req *taskpb.CreateTaskRequ
 		logger.Log.Infof("grpc create task: missing token")
 		return nil, status.Error(codes.Unauthenticated, "missing token")
 	}
-	if req.GetDueDate() <= 0 {
-		logger.Log.Infof("grpc create task: invalid due date")
-		return nil, status.Error(codes.InvalidArgument, "invalid due date")
-	}
 
 	dueDate := time.Unix(req.GetDueDate(), 0)
 	task, err := h.svc.Create(ctx, token, req.GetDescription(), dueDate)
@@ -79,13 +75,7 @@ func (h *TaskHandler) UpdateTaskStatus(ctx context.Context, req *taskpb.UpdateTa
 		return nil, status.Error(codes.Unauthenticated, "missing token")
 	}
 
-	statusValue, err := toDomainStatus(req.GetStatus())
-	if err != nil {
-		logger.Log.Infof("grpc update task status: invalid status err=%v", err)
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	task, err := h.svc.UpdateStatus(ctx, token, req.GetId(), statusValue)
+	task, err := h.svc.UpdateStatus(ctx, token, req.GetId(), toDomainStatus(req.GetStatus()))
 	if err != nil {
 		return nil, mapTaskError(err)
 	}
@@ -119,18 +109,18 @@ func parseBearerToken(value string) (string, bool) {
 	return token, true
 }
 
-func toDomainStatus(status taskpb.TaskStatus) (domain.TaskStatus, error) {
+func toDomainStatus(status taskpb.TaskStatus) domain.TaskStatus {
 	switch status {
 	case taskpb.TaskStatus_TASK_STATUS_CREATED:
-		return domain.CREATED, nil
+		return domain.CREATED
 	case taskpb.TaskStatus_TASK_STATUS_AT_WORK:
-		return domain.AT_WORK, nil
+		return domain.AT_WORK
 	case taskpb.TaskStatus_TASK_STATUS_COMPLETED:
-		return domain.COMPLETED, nil
+		return domain.COMPLETED
 	case taskpb.TaskStatus_TASK_STATUS_EXPIRED:
-		return domain.EXPIRED, nil
+		return domain.EXPIRED
 	default:
-		return domain.CREATED, errors.New("unknown status")
+		return domain.CREATED
 	}
 }
 

@@ -4,13 +4,19 @@ package account.v1;
 
 option go_package = "task-tracker/proto-lib/gen/private/account;accountpb";
 
+import "validate/validate.proto";
+
 message User {
   int64 id = 1;
   string email = 2;
 }
 
 message GetUsersByIDsRequest {
-  repeated int64 ids = 1;
+  repeated int64 ids = 1 [(validate.rules).repeated = {
+    min_items: 1
+    unique: true
+    items: {int64: {gt: 0}}
+  }];
 }
 
 message UsersResponse {

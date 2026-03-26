@@ -5,6 +5,7 @@ package task.v1;
 option go_package = "task-tracker/proto-lib/gen/public/task;taskpb";
 
 import "google/api/annotations.proto";
+import "validate/validate.proto";
 
 enum TaskStatus {
   TASK_STATUS_CREATED = 0;
@@ -23,19 +24,22 @@ message Task {
 }
 
 message GetTaskRequest {
-  int64 id = 1;
+  int64 id = 1 [(validate.rules).int64.gt = 0];
 }
 
 message GetTasksRequest {}
 
 message CreateTaskRequest {
-  string description = 1;
-  int64 due_date = 2;
+  string description = 1 [(validate.rules).string.min_len = 1];
+  int64 due_date = 2 [(validate.rules).int64.gt = 0];
 }
 
 message UpdateTaskStatusRequest {
-  int64 id = 1;
-  TaskStatus status = 2;
+  int64 id = 1 [(validate.rules).int64.gt = 0];
+  TaskStatus status = 2 [(validate.rules).enum = {
+    defined_only: true
+    not_in: [3]
+  }];
 }
 
 message TaskResponse {

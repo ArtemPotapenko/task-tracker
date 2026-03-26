@@ -10,7 +10,6 @@ import (
 	"task-tracker/account-service/internal/domain"
 	"task-tracker/account-service/internal/usecase"
 	accountpb "task-tracker/proto-lib/gen/private/account"
-	"task-tracker/shared-libs/pkg/logger"
 )
 
 type UsersHandler struct {
@@ -24,10 +23,6 @@ func NewUsersHandler(svc *usecase.AuthService) UsersHandler {
 
 func (h UsersHandler) GetUsersByIDs(ctx context.Context, req *accountpb.GetUsersByIDsRequest) (*accountpb.UsersResponse, error) {
 	ids := req.GetIds()
-	if len(ids) == 0 {
-		logger.Log.Infof("grpc get users: empty ids")
-		return nil, status.Error(codes.InvalidArgument, "ids are required")
-	}
 
 	users, err := h.svc.GetUsersByIDs(ctx, ids)
 	if err != nil {

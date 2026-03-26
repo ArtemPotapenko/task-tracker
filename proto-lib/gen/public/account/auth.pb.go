@@ -7,6 +7,7 @@
 package accountpb
 
 import (
+	_ "github.com/envoyproxy/protoc-gen-validate/validate"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -183,14 +184,14 @@ var File_account_auth_proto protoreflect.FileDescriptor
 const file_account_auth_proto_rawDesc = "" +
 	"\n" +
 	"\x12account/auth.proto\x12\n" +
-	"account.v1\x1a\x1cgoogle/api/annotations.proto\"l\n" +
-	"\x0fRegisterRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\x12'\n" +
-	"\x0frepeat_password\x18\x03 \x01(\tR\x0erepeatPassword\"@\n" +
-	"\fLoginRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\" \n" +
+	"account.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17validate/validate.proto\"\x87\x01\n" +
+	"\x0fRegisterRequest\x12\x1d\n" +
+	"\x05email\x18\x01 \x01(\tB\a\xfaB\x04r\x02`\x01R\x05email\x12#\n" +
+	"\bpassword\x18\x02 \x01(\tB\a\xfaB\x04r\x02\x10\bR\bpassword\x120\n" +
+	"\x0frepeat_password\x18\x03 \x01(\tB\a\xfaB\x04r\x02\x10\bR\x0erepeatPassword\"R\n" +
+	"\fLoginRequest\x12\x1d\n" +
+	"\x05email\x18\x01 \x01(\tB\a\xfaB\x04r\x02`\x01R\x05email\x12#\n" +
+	"\bpassword\x18\x02 \x01(\tB\a\xfaB\x04r\x02\x10\bR\bpassword\" \n" +
 	"\fAuthResponse\x12\x10\n" +
 	"\x03jwt\x18\x01 \x01(\tR\x03jwt2\xc6\x01\n" +
 	"\vAuthService\x12_\n" +

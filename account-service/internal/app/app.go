@@ -14,6 +14,8 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"task-tracker/account-service/internal/config"
 	"task-tracker/account-service/internal/repo"
@@ -67,7 +69,7 @@ func Run() error {
 	authSvc := usecase.NewAuthService(&userRepo, hasher, tokens, publisher)
 	handler := transportgrpc.NewAuthHandler(authSvc)
 
-	server := grpc.NewServer(grpc.UnaryInterceptor(loggingUnaryServerInterceptor))
+	server := grpc.NewServer(grpc.ChainUnaryInterceptor(validationUnaryServerInterceptor, loggingUnaryServerInterceptor))
 	accountpb.RegisterAuthServiceServer(server, handler)
 	usersHandler := transportgrpc.NewUsersHandler(authSvc)
 	accountinternalpb.RegisterUsersServiceServer(server, usersHandler)
@@ -124,4 +126,19 @@ func loggingUnaryServerInterceptor(ctx context.Context, req any, info *grpc.Unar
 	}
 	logger.Log.Infof("grpc request: method=%s duration=%s ok", info.FullMethod, time.Since(start))
 	return resp, nil
+}
+
+type validatingRequest interface {
+	ValidateAll() error
+}
+
+func validationUnaryServerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	if message, ok := req.(validatingRequest); ok {
+		if err := message.ValidateAll(); err != nil {
+			logger.Log.Infof("grpc request: method=%s validation err=%v", info.FullMethod, err)
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+	}
+
+	return handler(ctx, req)
 }

@@ -14,6 +14,8 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	schedulerpb "task-tracker/proto-lib/gen/private/scheduler"
 	taskpb "task-tracker/proto-lib/gen/public/task"
@@ -64,7 +66,7 @@ func Run() error {
 	taskHandler := transportgrpc.NewTaskHandler(taskSvc)
 	schedulerHandler := transportgrpc.NewSchedulerHandler(taskSvc)
 
-	server := grpc.NewServer(grpc.UnaryInterceptor(loggingUnaryServerInterceptor))
+	server := grpc.NewServer(grpc.ChainUnaryInterceptor(validationUnaryServerInterceptor, loggingUnaryServerInterceptor))
 	taskpb.RegisterTaskServiceServer(server, taskHandler)
 	schedulerpb.RegisterSchedulerServiceServer(server, schedulerHandler)
 
@@ -120,4 +122,19 @@ func loggingUnaryServerInterceptor(ctx context.Context, req any, info *grpc.Unar
 	}
 	logger.Log.Infof("grpc request: method=%s duration=%s ok", info.FullMethod, time.Since(start))
 	return resp, nil
+}
+
+type validatingRequest interface {
+	ValidateAll() error
+}
+
+func validationUnaryServerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	if message, ok := req.(validatingRequest); ok {
+		if err := message.ValidateAll(); err != nil {
+			logger.Log.Infof("grpc request: method=%s validation err=%v", info.FullMethod, err)
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+	}
+
+	return handler(ctx, req)
 }

@@ -7,6 +7,7 @@
 package accountpb
 
 import (
+	_ "github.com/envoyproxy/protoc-gen-validate/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -166,12 +167,13 @@ var File_account_users_proto protoreflect.FileDescriptor
 const file_account_users_proto_rawDesc = "" +
 	"\n" +
 	"\x13account/users.proto\x12\n" +
-	"account.v1\",\n" +
+	"account.v1\x1a\x17validate/validate.proto\",\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x14\n" +
-	"\x05email\x18\x02 \x01(\tR\x05email\"(\n" +
-	"\x14GetUsersByIDsRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\x03R\x03ids\"7\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\":\n" +
+	"\x14GetUsersByIDsRequest\x12\"\n" +
+	"\x03ids\x18\x01 \x03(\x03B\x10\xfaB\r\x92\x01\n" +
+	"\b\x01\x18\x01\"\x04\"\x02 \x00R\x03ids\"7\n" +
 	"\rUsersResponse\x12&\n" +
 	"\x05users\x18\x01 \x03(\v2\x10.account.v1.UserR\x05users2\\\n" +
 	"\fUsersService\x12L\n" +

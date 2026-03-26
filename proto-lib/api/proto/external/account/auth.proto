@@ -5,16 +5,17 @@ package account.v1;
 option go_package = "task-tracker/proto-lib/gen/public/account;accountpb";
 
 import "google/api/annotations.proto";
+import "validate/validate.proto";
 
 message RegisterRequest {
-  string email = 1;
-  string password = 2;
-  string repeat_password = 3;
+  string email = 1 [(validate.rules).string.email = true];
+  string password = 2 [(validate.rules).string.min_len = 8];
+  string repeat_password = 3 [(validate.rules).string.min_len = 8];
 }
 
 message LoginRequest {
-  string email = 1;
-  string password = 2;
+  string email = 1 [(validate.rules).string.email = true];
+  string password = 2 [(validate.rules).string.min_len = 8];
 }
 
 message AuthResponse {

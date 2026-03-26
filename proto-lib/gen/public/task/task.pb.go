@@ -7,6 +7,7 @@
 package taskpb
 
 import (
+	_ "github.com/envoyproxy/protoc-gen-validate/validate"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -434,7 +435,7 @@ var File_task_task_proto protoreflect.FileDescriptor
 
 const file_task_task_proto_rawDesc = "" +
 	"\n" +
-	"\x0ftask/task.proto\x12\atask.v1\x1a\x1cgoogle/api/annotations.proto\"\xb8\x01\n" +
+	"\x0ftask/task.proto\x12\atask.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x17validate/validate.proto\"\xb8\x01\n" +
 	"\x04Task\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12 \n" +
@@ -442,16 +443,17 @@ const file_task_task_proto_rawDesc = "" +
 	"\x06status\x18\x04 \x01(\x0e2\x13.task.v1.TaskStatusR\x06status\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x05 \x01(\x03R\tcreatedAt\x12\x19\n" +
-	"\bdue_date\x18\x06 \x01(\x03R\adueDate\" \n" +
-	"\x0eGetTaskRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"\x11\n" +
-	"\x0fGetTasksRequest\"P\n" +
-	"\x11CreateTaskRequest\x12 \n" +
-	"\vdescription\x18\x01 \x01(\tR\vdescription\x12\x19\n" +
-	"\bdue_date\x18\x02 \x01(\x03R\adueDate\"V\n" +
-	"\x17UpdateTaskStatusRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12+\n" +
-	"\x06status\x18\x02 \x01(\x0e2\x13.task.v1.TaskStatusR\x06status\"1\n" +
+	"\bdue_date\x18\x06 \x01(\x03R\adueDate\")\n" +
+	"\x0eGetTaskRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\x03B\a\xfaB\x04\"\x02 \x00R\x02id\"\x11\n" +
+	"\x0fGetTasksRequest\"b\n" +
+	"\x11CreateTaskRequest\x12)\n" +
+	"\vdescription\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\vdescription\x12\"\n" +
+	"\bdue_date\x18\x02 \x01(\x03B\a\xfaB\x04\"\x02 \x00R\adueDate\"k\n" +
+	"\x17UpdateTaskStatusRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\x03B\a\xfaB\x04\"\x02 \x00R\x02id\x127\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x13.task.v1.TaskStatusB\n" +
+	"\xfaB\a\x82\x01\x04\x10\x01 \x03R\x06status\"1\n" +
 	"\fTaskResponse\x12!\n" +
 	"\x04task\x18\x01 \x01(\v2\r.task.v1.TaskR\x04task\"4\n" +
 	"\rTasksResponse\x12#\n" +
