@@ -63,9 +63,14 @@ func Run() error {
 	openapiui.Mount(handler, cfg.OpenAPIDir)
 	handler.Handle("/", gatewayMux)
 
+	var httpHandler http.Handler = handler
+	if cfg.RateLimitRPS > 0 && cfg.RateLimitBurst > 0 {
+		httpHandler = newRateLimitMiddleware(cfg.RateLimitRPS, cfg.RateLimitBurst).Wrap(handler)
+	}
+
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           handler,
+		Handler:           httpHandler,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

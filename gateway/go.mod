@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0
+	golang.org/x/time v0.15.0
 	google.golang.org/grpc v1.79.1
 	task-tracker/proto-lib v0.0.0
 	task-tracker/shared-libs v0.0.0
