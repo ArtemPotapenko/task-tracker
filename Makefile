@@ -1,4 +1,4 @@
-.PHONY: tools tidy proto proto-external proto-internal clean-proto migrate-account-up migrate-account-down migrate-task-up migrate-task-down test build lint
+.PHONY: tools tidy proto proto-external proto-internal clean-proto migrate-account-up migrate-account-down migrate-task-up migrate-task-down test test-unit test-integration test-e2e build lint
 
 GOPATH := $(shell go env GOPATH)
 export PATH := $(GOPATH)/bin:$(PATH)
@@ -14,6 +14,9 @@ ACCOUNT_DB_DSN ?= postgres://admin:secret@localhost:5433/accountdb?sslmode=disab
 TASK_DB_DSN ?= postgres://admin:secret@localhost:5434/taskdb?sslmode=disable
 PROTOC ?= protoc
 WORKSPACE_PKGS := ./account-service/... ./task-service/... ./email-service/... ./gateway/... ./scheduler-service/... ./shared-libs/... ./proto-lib/...
+UNIT_TEST_PKGS := ./account-service/internal/usecase ./task-service/internal/usecase ./email-service/internal/usecase ./email-service/internal/transport/kafka
+INTEGRATION_TEST_PKGS := ./account-service/internal/repo ./task-service/internal/repo
+E2E_TEST_PKGS := ./account-service/internal/app ./task-service/internal/app ./scheduler-service/internal/app
 
 PROTO_ROOT_DIR := proto-lib
 PROTO_INCLUDE_DIR := $(PROTO_ROOT_DIR)/api/proto/include
@@ -79,6 +82,15 @@ migrate-task-down:
 
 test:
 	env GOCACHE=$(GOCACHE) $(GO) test $(WORKSPACE_PKGS)
+
+test-unit:
+	env GOCACHE=$(GOCACHE) $(GO) test $(UNIT_TEST_PKGS)
+
+test-integration:
+	env GOCACHE=$(GOCACHE) TESTCONTAINERS_RYUK_DISABLED=true $(GO) test -count=1 -v $(INTEGRATION_TEST_PKGS)
+
+test-e2e:
+	env GOCACHE=$(GOCACHE) $(GO) test $(E2E_TEST_PKGS)
 
 build:
 	env GOCACHE=$(GOCACHE) $(GO) build $(WORKSPACE_PKGS)
