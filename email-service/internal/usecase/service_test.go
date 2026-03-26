@@ -85,7 +85,7 @@ func TestServiceSendDailySummary(t *testing.T) {
 				return nil
 			}},
 			stubDedupe{onceFunc: func(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-				if key != "7" {
+				if key != "dailyExpired:2026-03-19:7" {
 					t.Fatalf("unexpected dedupe key = %q", key)
 				}
 				return true, nil

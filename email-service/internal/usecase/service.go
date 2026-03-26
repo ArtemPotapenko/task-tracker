@@ -42,6 +42,8 @@ type DailySummaryMessage struct {
 	Users []DailySummaryUser `json:"users"`
 }
 
+const dedupeTopicDailyExpired = "dailyExpired"
+
 func (s *Service) SendWelcome(ctx context.Context, msg RegisterMessage) error {
 	if msg.Email == "" {
 		logger.Log.Infof("email send welcome: empty email")
@@ -73,7 +75,7 @@ func (s *Service) SendDailySummary(ctx context.Context, email string, userID int
 		logger.Log.Infof("email send daily: invalid user id=%d", userID)
 		return errors.New("invalid user id")
 	}
-	if ok, err := s.allow(ctx, keyDaily(date, userID)); err != nil || !ok {
+	if ok, err := s.allow(ctx, keyDaily(dedupeTopicDailyExpired, date, userID)); err != nil || !ok {
 		if err != nil {
 			logger.Log.Infof("email send daily: dedupe error user_id=%d err=%v", userID, err)
 		}
@@ -113,6 +115,6 @@ func keyRegister(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
 
-func keyDaily(date string, userID int64) string {
-	return fmt.Sprintf("%d", userID)
+func keyDaily(topic, date string, userID int64) string {
+	return fmt.Sprintf("%s:%s:%d", strings.TrimSpace(topic), strings.TrimSpace(date), userID)
 }
