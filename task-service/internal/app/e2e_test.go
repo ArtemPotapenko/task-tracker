@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -115,6 +117,9 @@ func (taskTestTokenParser) ParseUserID(token string) (int64, error) {
 	if token == "jwt-user-1" {
 		return 1, nil
 	}
+	if token == "jwt-user-2" {
+		return 2, nil
+	}
 	return 0, errors.New("invalid token")
 }
 
@@ -124,8 +129,8 @@ func (taskTestPublisher) PublishExpiredSummary(ctx context.Context, summary usec
 	return nil
 }
 
-func taskAuthContext() context.Context {
-	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer jwt-user-1"))
+func taskAuthContext(token string) context.Context {
+	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
 }
 
 func TestTaskServiceE2E(t *testing.T) {
@@ -159,7 +164,7 @@ func TestTaskServiceE2E(t *testing.T) {
 	taskClient := taskpb.NewTaskServiceClient(conn)
 	schedulerClient := schedulerpb.NewSchedulerServiceClient(conn)
 
-	createResp, err := taskClient.CreateTask(taskAuthContext(), &taskpb.CreateTaskRequest{
+	createResp, err := taskClient.CreateTask(taskAuthContext("jwt-user-1"), &taskpb.CreateTaskRequest{
 		Description: "ship feature",
 		DueDate:     time.Now().Add(time.Hour).Unix(),
 	})
@@ -170,7 +175,7 @@ func TestTaskServiceE2E(t *testing.T) {
 		t.Fatalf("CreateTask() id = 0, want non-zero")
 	}
 
-	getResp, err := taskClient.GetTask(taskAuthContext(), &taskpb.GetTaskRequest{
+	getResp, err := taskClient.GetTask(taskAuthContext("jwt-user-1"), &taskpb.GetTaskRequest{
 		Id: createResp.GetTask().GetId(),
 	})
 	if err != nil {
@@ -180,7 +185,7 @@ func TestTaskServiceE2E(t *testing.T) {
 		t.Fatalf("GetTask() description = %q", getResp.GetTask().GetDescription())
 	}
 
-	todayResp, err := taskClient.GetTodayTasks(taskAuthContext(), &taskpb.GetTasksRequest{})
+	todayResp, err := taskClient.GetTodayTasks(taskAuthContext("jwt-user-1"), &taskpb.GetTasksRequest{})
 	if err != nil {
 		t.Fatalf("GetTodayTasks() error = %v", err)
 	}
@@ -188,7 +193,7 @@ func TestTaskServiceE2E(t *testing.T) {
 		t.Fatalf("GetTodayTasks() returned no tasks")
 	}
 
-	updateResp, err := taskClient.UpdateTaskStatus(taskAuthContext(), &taskpb.UpdateTaskStatusRequest{
+	updateResp, err := taskClient.UpdateTaskStatus(taskAuthContext("jwt-user-1"), &taskpb.UpdateTaskStatusRequest{
 		Id:     createResp.GetTask().GetId(),
 		Status: taskpb.TaskStatus_TASK_STATUS_COMPLETED,
 	})
@@ -197,6 +202,13 @@ func TestTaskServiceE2E(t *testing.T) {
 	}
 	if updateResp.GetTask().GetStatus() != taskpb.TaskStatus_TASK_STATUS_COMPLETED {
 		t.Fatalf("UpdateTaskStatus() status = %v", updateResp.GetTask().GetStatus())
+	}
+
+	if _, err := taskClient.UpdateTaskStatus(taskAuthContext("jwt-user-2"), &taskpb.UpdateTaskStatusRequest{
+		Id:     createResp.GetTask().GetId(),
+		Status: taskpb.TaskStatus_TASK_STATUS_AT_WORK,
+	}); status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("UpdateTaskStatus() foreign status = %v, want %v", status.Code(err), codes.PermissionDenied)
 	}
 
 	expiredSeed, err := repo.Create(context.Background(), domain.Task{

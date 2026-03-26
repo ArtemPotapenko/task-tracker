@@ -182,7 +182,17 @@ func (s *TaskService) UpdateStatus(ctx context.Context, token string, id int64, 
 		return domain.Task{}, ErrInvalidToken
 	}
 
-	task, err := s.repo.UpdateStatusByIDAndUserID(ctx, id, userID, status)
+	task, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		logger.Log.Infof("task update status: get task error id=%d err=%v", id, err)
+		return domain.Task{}, err
+	}
+	if task.UserID != userID {
+		logger.Log.Infof("task update status: forbidden id=%d owner_user_id=%d actor_user_id=%d", id, task.UserID, userID)
+		return domain.Task{}, domain.ErrForbidden
+	}
+
+	task, err = s.repo.UpdateStatusByIDAndUserID(ctx, id, userID, status)
 	if err != nil {
 		logger.Log.Infof("task update status: repo error id=%d user_id=%d err=%v", id, userID, err)
 		return domain.Task{}, err

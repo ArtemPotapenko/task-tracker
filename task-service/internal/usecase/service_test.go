@@ -11,6 +11,7 @@ import (
 
 type stubTaskRepo struct {
 	createFunc                     func(ctx context.Context, task domain.Task) (domain.Task, error)
+	getByIDFunc                    func(ctx context.Context, id int64) (domain.Task, error)
 	getByIDAndUserIDFunc           func(ctx context.Context, id, userID int64) (domain.Task, error)
 	getByUserIDAndDueDateBetweenFn func(ctx context.Context, userID int64, from, to time.Time) ([]domain.Task, error)
 	getByDueDateBetweenFunc        func(ctx context.Context, from, to time.Time) ([]domain.Task, error)
@@ -24,6 +25,9 @@ func (r *stubTaskRepo) Create(ctx context.Context, task domain.Task) (domain.Tas
 }
 
 func (r *stubTaskRepo) GetByID(ctx context.Context, id int64) (domain.Task, error) {
+	if r.getByIDFunc != nil {
+		return r.getByIDFunc(ctx, id)
+	}
 	return domain.Task{}, nil
 }
 
@@ -76,6 +80,7 @@ func TestTaskServiceCreate(t *testing.T) {
 			task.ID = 100
 			return task, nil
 		},
+		getByIDFunc:                    func(ctx context.Context, id int64) (domain.Task, error) { return domain.Task{}, nil },
 		getByIDAndUserIDFunc:           func(ctx context.Context, id, userID int64) (domain.Task, error) { return domain.Task{}, nil },
 		getByUserIDAndDueDateBetweenFn: func(ctx context.Context, userID int64, from, to time.Time) ([]domain.Task, error) { return nil, nil },
 		getByDueDateBetweenFunc:        func(ctx context.Context, from, to time.Time) ([]domain.Task, error) { return nil, nil },
@@ -114,6 +119,7 @@ func TestTaskServiceGetToday(t *testing.T) {
 
 	repo := &stubTaskRepo{
 		createFunc:           func(ctx context.Context, task domain.Task) (domain.Task, error) { return domain.Task{}, nil },
+		getByIDFunc:          func(ctx context.Context, id int64) (domain.Task, error) { return domain.Task{}, nil },
 		getByIDAndUserIDFunc: func(ctx context.Context, id, userID int64) (domain.Task, error) { return domain.Task{}, nil },
 		getByUserIDAndDueDateBetweenFn: func(ctx context.Context, userID int64, from, to time.Time) ([]domain.Task, error) {
 			gotFrom, gotTo = from, to
@@ -157,6 +163,7 @@ func TestTaskServiceProcessRecentExpired(t *testing.T) {
 
 	repo := &stubTaskRepo{
 		createFunc:                     func(ctx context.Context, task domain.Task) (domain.Task, error) { return domain.Task{}, nil },
+		getByIDFunc:                    func(ctx context.Context, id int64) (domain.Task, error) { return domain.Task{}, nil },
 		getByIDAndUserIDFunc:           func(ctx context.Context, id, userID int64) (domain.Task, error) { return domain.Task{}, nil },
 		getByUserIDAndDueDateBetweenFn: func(ctx context.Context, userID int64, from, to time.Time) ([]domain.Task, error) { return nil, nil },
 		getByDueDateBetweenFunc: func(ctx context.Context, from, to time.Time) ([]domain.Task, error) {
@@ -202,7 +209,11 @@ func TestTaskServiceProcessRecentExpired(t *testing.T) {
 
 func TestTaskServiceUpdateStatusRejectsInvalidToken(t *testing.T) {
 	repo := &stubTaskRepo{
-		createFunc:                     func(ctx context.Context, task domain.Task) (domain.Task, error) { return domain.Task{}, nil },
+		createFunc: func(ctx context.Context, task domain.Task) (domain.Task, error) { return domain.Task{}, nil },
+		getByIDFunc: func(ctx context.Context, id int64) (domain.Task, error) {
+			t.Fatalf("GetByID() should not be called for invalid token")
+			return domain.Task{}, nil
+		},
 		getByIDAndUserIDFunc:           func(ctx context.Context, id, userID int64) (domain.Task, error) { return domain.Task{}, nil },
 		getByUserIDAndDueDateBetweenFn: func(ctx context.Context, userID int64, from, to time.Time) ([]domain.Task, error) { return nil, nil },
 		getByDueDateBetweenFunc:        func(ctx context.Context, from, to time.Time) ([]domain.Task, error) { return nil, nil },
@@ -224,5 +235,36 @@ func TestTaskServiceUpdateStatusRejectsInvalidToken(t *testing.T) {
 	_, err := svc.UpdateStatus(context.Background(), "bad", 1, domain.COMPLETED)
 	if !errors.Is(err, ErrInvalidToken) {
 		t.Fatalf("UpdateStatus() error = %v, want %v", err, ErrInvalidToken)
+	}
+}
+
+func TestTaskServiceUpdateStatusRejectsForeignTask(t *testing.T) {
+	repo := &stubTaskRepo{
+		createFunc: func(ctx context.Context, task domain.Task) (domain.Task, error) { return domain.Task{}, nil },
+		getByIDFunc: func(ctx context.Context, id int64) (domain.Task, error) {
+			return domain.Task{ID: id, UserID: 99, Status: domain.CREATED}, nil
+		},
+		getByIDAndUserIDFunc:           func(ctx context.Context, id, userID int64) (domain.Task, error) { return domain.Task{}, nil },
+		getByUserIDAndDueDateBetweenFn: func(ctx context.Context, userID int64, from, to time.Time) ([]domain.Task, error) { return nil, nil },
+		getByDueDateBetweenFunc:        func(ctx context.Context, from, to time.Time) ([]domain.Task, error) { return nil, nil },
+		getByDueDateStatusNotFunc: func(ctx context.Context, from, to time.Time, status domain.TaskStatus) ([]domain.Task, error) {
+			return nil, nil
+		},
+		updateStatusByIDAndUserIDFunc: func(ctx context.Context, id, userID int64, status domain.TaskStatus) (domain.Task, error) {
+			t.Fatalf("UpdateStatusByIDAndUserID() should not be called for foreign task")
+			return domain.Task{}, nil
+		},
+		updateStatusByIDsFunc: func(ctx context.Context, ids []int64, status domain.TaskStatus) error { return nil },
+	}
+
+	svc := NewTaskService(
+		repo,
+		stubTokenParser{parseUserIDFunc: func(token string) (int64, error) { return 42, nil }},
+		nil,
+	)
+
+	_, err := svc.UpdateStatus(context.Background(), "jwt", 1, domain.COMPLETED)
+	if !errors.Is(err, domain.ErrForbidden) {
+		t.Fatalf("UpdateStatus() error = %v, want %v", err, domain.ErrForbidden)
 	}
 }
