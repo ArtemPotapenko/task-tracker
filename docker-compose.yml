@@ -52,9 +52,7 @@ services:
   account-service:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-      args:
-        SERVICE: cmd/account-service
+      dockerfile: account-service/Dockerfile
     environment:
       GRPC_ADDR: ":50051"
       DB_DRIVER: pgx
@@ -75,9 +73,7 @@ services:
   task-service:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-      args:
-        SERVICE: cmd/task-manager
+      dockerfile: task-service/Dockerfile
     environment:
       GRPC_ADDR: ":50052"
       DB_DRIVER: pgx
@@ -96,9 +92,7 @@ services:
   email-service:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-      args:
-        SERVICE: cmd/email-service
+      dockerfile: email-service/Dockerfile
     environment:
       SMTP_HOST: smtp
       SMTP_PORT: "1025"
@@ -127,9 +121,7 @@ services:
   scheduler-service:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-      args:
-        SERVICE: cmd/task-scheduler
+      dockerfile: scheduler-service/Dockerfile
     environment:
       TASK_GRPC_ADDR: task-service:50052
       INTERVAL: 1m
@@ -141,14 +133,12 @@ services:
   http-gateway:
     build:
       context: .
-      dockerfile: docker/Dockerfile
-      args:
-        SERVICE: cmd/gateway
+      dockerfile: gateway/Dockerfile
     environment:
       GATEWAY_HTTP_ADDR: ":8080"
       ACCOUNT_GRPC_ADDR: account-service:50051
       TASK_GRPC_ADDR: task-service:50052
-      GATEWAY_OPENAPI_DIR: /app/gen/public/openapi
+      GATEWAY_OPENAPI_DIR: /app/proto-lib/gen/public/openapi
       GATEWAY_SHUTDOWN_TIMEOUT: 5s
     depends_on:
       account-service:

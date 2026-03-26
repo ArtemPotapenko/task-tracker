@@ -1,0 +1,72 @@
+package app
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
+
+	schedulerpb "task-tracker/proto-lib/gen/private/scheduler"
+	"task-tracker/scheduler-service/internal/config"
+	"task-tracker/shared-libs/pkg/logger"
+)
+
+func Run() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+
+	conn, err := grpc.NewClient(cfg.TaskGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("dial task grpc: %w", err)
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			logger.Log.Infof("close grpc conn: %v", err)
+		}
+	}()
+
+	client := schedulerpb.NewSchedulerServiceClient(conn)
+
+	ticker := time.NewTicker(cfg.Interval)
+	defer ticker.Stop()
+
+	run := func() {
+		ctx, cancel := context.WithTimeout(context.Background(), cfg.CallTimeout)
+		defer cancel()
+
+		logger.Log.Infof("scheduler: process recent expired start")
+		if _, err := client.ProcessRecentExpired(ctx, &emptypb.Empty{}); err != nil {
+			st := status.Convert(err)
+			if st != nil {
+				logger.Log.Infof("process recent expired: %s", st.Message())
+				return
+			}
+			logger.Log.Infof("process recent expired: %v", err)
+			return
+		}
+		logger.Log.Infof("scheduler: process recent expired ok")
+	}
+
+	run()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	for {
+		select {
+		case <-ticker.C:
+			run()
+		case <-sigCh:
+			return nil
+		}
+	}
+}

@@ -1,0 +1,11 @@
+go 1.25.0
+
+use (
+	./account-service
+	./email-service
+	./gateway
+	./proto-lib
+	./scheduler-service
+	./shared-libs
+	./task-service
+)

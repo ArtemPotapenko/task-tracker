@@ -1,30 +1,26 @@
-.PHONY: tools proto proto-external proto-internal gateway openapi clean-proto migrate-account-up migrate-account-down migrate-task-up migrate-task-down test-unit test-integration test-e2e build lint
+.PHONY: tools tidy proto proto-external proto-internal clean-proto migrate-account-up migrate-account-down migrate-task-up migrate-task-down test build lint
 
 GOPATH := $(shell go env GOPATH)
 export PATH := $(GOPATH)/bin:$(PATH)
 
-PROTOC ?= protoc
-GOOSE ?= goose
 GO ?= go
+GOOSE ?= goose
 GOLANGCI_LINT ?= golangci-lint
 GOLANGCI_LINT_VERSION ?= v1.64.8
+GOCACHE ?= /tmp/go-build-cache
+MODULE_DIRS := shared-libs proto-lib account-service task-service email-service gateway scheduler-service
 
 ACCOUNT_DB_DSN ?= postgres://admin:secret@localhost:5433/accountdb?sslmode=disable
 TASK_DB_DSN ?= postgres://admin:secret@localhost:5434/taskdb?sslmode=disable
-GOCACHE ?= /tmp/go-build-cache
+PROTOC ?= protoc
+WORKSPACE_PKGS := ./account-service/... ./task-service/... ./email-service/... ./gateway/... ./scheduler-service/... ./shared-libs/... ./proto-lib/...
 
-ACCOUNT_MIGRATIONS_DIR := migrations/account
-TASK_MIGRATIONS_DIR := migrations/task
-PROTO_INCLUDE_DIR := api/proto/include
-
-UNIT_TEST_PKGS := ./internal/account/usecase ./internal/task/usecase ./internal/email/usecase ./internal/email/transport/kafka
-INTEGRATION_TEST_PKGS := ./internal/account/repo ./internal/task/repo
-E2E_TEST_PKGS := ./internal/account/app ./internal/task/app ./internal/scheduler/app
-
-EXTERNAL_PROTO_DIR := api/proto/external
-INTERNAL_PROTO_DIR := api/proto/internal
-GEN_EXTERNAL_DIR := gen/public
-GEN_INTERNAL_DIR := gen/private
+PROTO_ROOT_DIR := proto-lib
+PROTO_INCLUDE_DIR := $(PROTO_ROOT_DIR)/api/proto/include
+EXTERNAL_PROTO_DIR := $(PROTO_ROOT_DIR)/api/proto/external
+INTERNAL_PROTO_DIR := $(PROTO_ROOT_DIR)/api/proto/internal
+GEN_EXTERNAL_DIR := $(PROTO_ROOT_DIR)/gen/public
+GEN_INTERNAL_DIR := $(PROTO_ROOT_DIR)/gen/private
 
 PROTO_EXTERNAL_FILES := \
 	$(EXTERNAL_PROTO_DIR)/account/auth.proto \
@@ -42,15 +38,21 @@ tools:
 	go install github.com/pressly/goose/v3/cmd/goose@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
+tidy:
+	@for dir in $(MODULE_DIRS); do \
+		echo "==> go mod tidy $$dir"; \
+		( cd $$dir && $(GO) mod tidy ); \
+	done
+
 proto: proto-external proto-internal
 
 proto-external:
-	mkdir -p gen/public/openapi
+	mkdir -p $(GEN_EXTERNAL_DIR)/openapi
 	$(PROTOC) -I $(EXTERNAL_PROTO_DIR) -I $(PROTO_INCLUDE_DIR) \
 		--go_out=$(GEN_EXTERNAL_DIR) --go_opt=paths=source_relative \
 		--go-grpc_out=$(GEN_EXTERNAL_DIR) --go-grpc_opt=paths=source_relative \
 		--grpc-gateway_out=$(GEN_EXTERNAL_DIR) --grpc-gateway_opt=logtostderr=true,paths=source_relative \
-		--openapiv2_out=gen/public/openapi --openapiv2_opt=logtostderr=true \
+		--openapiv2_out=$(GEN_EXTERNAL_DIR)/openapi --openapiv2_opt=logtostderr=true \
 		$(PROTO_EXTERNAL_FILES)
 
 proto-internal:
@@ -59,37 +61,27 @@ proto-internal:
 		--go-grpc_out=$(GEN_INTERNAL_DIR) --go-grpc_opt=paths=source_relative \
 		$(PROTO_INTERNAL_FILES)
 
-gateway: proto-external
-
-openapi: proto-external
-
 clean-proto:
-	rm -rf $(GEN_EXTERNAL_DIR)/account $(GEN_EXTERNAL_DIR)/task gen/public/openapi
+	rm -rf $(GEN_EXTERNAL_DIR)/account $(GEN_EXTERNAL_DIR)/task $(GEN_EXTERNAL_DIR)/openapi
 	rm -rf $(GEN_INTERNAL_DIR)/account $(GEN_INTERNAL_DIR)/scheduler
 
 migrate-account-up:
-	$(GOOSE) -dir $(ACCOUNT_MIGRATIONS_DIR) postgres "$(ACCOUNT_DB_DSN)" up
+	$(GOOSE) -dir account-service/migrations postgres "$(ACCOUNT_DB_DSN)" up
 
 migrate-account-down:
-	$(GOOSE) -dir $(ACCOUNT_MIGRATIONS_DIR) postgres "$(ACCOUNT_DB_DSN)" down
+	$(GOOSE) -dir account-service/migrations postgres "$(ACCOUNT_DB_DSN)" down
 
 migrate-task-up:
-	$(GOOSE) -dir $(TASK_MIGRATIONS_DIR) postgres "$(TASK_DB_DSN)" up
+	$(GOOSE) -dir task-service/migrations postgres "$(TASK_DB_DSN)" up
 
 migrate-task-down:
-	$(GOOSE) -dir $(TASK_MIGRATIONS_DIR) postgres "$(TASK_DB_DSN)" down
+	$(GOOSE) -dir task-service/migrations postgres "$(TASK_DB_DSN)" down
 
-test-unit:
-	env GOCACHE=$(GOCACHE) $(GO) test $(UNIT_TEST_PKGS)
-
-test-integration:
-	env GOCACHE=$(GOCACHE) TESTCONTAINERS_RYUK_DISABLED=true $(GO) test -count=1 -v $(INTEGRATION_TEST_PKGS)
-
-test-e2e:
-	env GOCACHE=$(GOCACHE) $(GO) test $(E2E_TEST_PKGS)
+test:
+	env GOCACHE=$(GOCACHE) $(GO) test $(WORKSPACE_PKGS)
 
 build:
-	env GOCACHE=$(GOCACHE) $(GO) build ./...
+	env GOCACHE=$(GOCACHE) $(GO) build $(WORKSPACE_PKGS)
 
 lint:
-	env GOCACHE=$(GOCACHE) $(GOLANGCI_LINT) run ./...
+	env GOCACHE=$(GOCACHE) $(GOLANGCI_LINT) run $(WORKSPACE_PKGS)
