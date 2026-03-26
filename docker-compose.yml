@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: secret
     ports:
-      - "5433:5432"
+      - "${POSTGRES_ACCOUNT_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d accountdb"]
       interval: 5s
@@ -20,7 +20,7 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: secret
     ports:
-      - "5434:5432"
+      - "${POSTGRES_TASK_PORT:-5434}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d taskdb"]
       interval: 5s
@@ -47,7 +47,7 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
     ports:
-      - "9092:9092"
+      - "${KAFKA_PORT:-9092}:9092"
 
   account-service:
     build:
@@ -68,7 +68,7 @@ services:
       kafka:
         condition: service_started
     ports:
-      - "50051:50051"
+      - "${ACCOUNT_SERVICE_PORT:-50051}:50051"
 
   task-service:
     build:
@@ -87,7 +87,7 @@ services:
       kafka:
         condition: service_started
     ports:
-      - "50052:50052"
+      - "${TASK_SERVICE_PORT:-50052}:50052"
 
   email-service:
     build:
@@ -146,10 +146,10 @@ services:
       task-service:
         condition: service_started
     ports:
-      - "8080:8080"
+      - "${HTTP_GATEWAY_PORT:-8080}:8080"
 
   smtp:
     image: mailhog/mailhog:v1.0.1
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "${SMTP_PORT_EXTERNAL:-1025}:1025"
+      - "${MAILHOG_UI_PORT:-8025}:8025"
