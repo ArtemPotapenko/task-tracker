@@ -27,42 +27,27 @@ func NewService(mailer Mailer, dedupe DedupeStore, dedupeTTL time.Duration) *Ser
 	return &Service{mailer: mailer, dedupe: dedupe, dedupeTTL: dedupeTTL}
 }
 
-type RegisterMessage struct {
-	Email string `json:"email"`
-}
-
-type DailySummaryUser struct {
-	UserID       int64 `json:"user_id"`
-	Completed    int   `json:"completed"`
-	NotCompleted int   `json:"not_completed"`
-}
-
-type DailySummaryMessage struct {
-	Date  string             `json:"date"`
-	Users []DailySummaryUser `json:"users"`
-}
-
 const dedupeTopicDailyExpired = "dailyExpired"
 
-func (s *Service) SendWelcome(ctx context.Context, msg RegisterMessage) error {
-	if msg.Email == "" {
+func (s *Service) SendWelcome(ctx context.Context, email string) error {
+	if email == "" {
 		logger.Log.Infof("email send welcome: empty email")
 		return errors.New("empty email")
 	}
-	if ok, err := s.allow(ctx, keyRegister(msg.Email)); err != nil || !ok {
+	if ok, err := s.allow(ctx, keyRegister(email)); err != nil || !ok {
 		if err != nil {
-			logger.Log.Infof("email send welcome: dedupe error email=%s err=%v", msg.Email, err)
+			logger.Log.Infof("email send welcome: dedupe error email=%s err=%v", email, err)
 		}
 		return err
 	}
 
 	subject := "Добро пожаловать в Task Tracker"
 	body := "Здравствуйте! Ваш аккаунт успешно создан."
-	if err := s.mailer.Send(msg.Email, subject, body); err != nil {
-		logger.Log.Infof("email send welcome: send error email=%s err=%v", msg.Email, err)
+	if err := s.mailer.Send(email, subject, body); err != nil {
+		logger.Log.Infof("email send welcome: send error email=%s err=%v", email, err)
 		return err
 	}
-	logger.Log.Infof("email send welcome: success email=%s", msg.Email)
+	logger.Log.Infof("email send welcome: success email=%s", email)
 	return nil
 }
 

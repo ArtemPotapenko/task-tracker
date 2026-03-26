@@ -64,10 +64,10 @@ func (p stubTokenParser) ParseUserID(token string) (int64, error) {
 }
 
 type stubEventPublisher struct {
-	publishFunc func(ctx context.Context, summary ExpiredSummary) error
+	publishFunc func(ctx context.Context, summary domain.ExpiredSummary) error
 }
 
-func (p stubEventPublisher) PublishExpiredSummary(ctx context.Context, summary ExpiredSummary) error {
+func (p stubEventPublisher) PublishExpiredSummary(ctx context.Context, summary domain.ExpiredSummary) error {
 	return p.publishFunc(ctx, summary)
 }
 
@@ -159,7 +159,7 @@ func TestTaskServiceGetToday(t *testing.T) {
 func TestTaskServiceProcessRecentExpired(t *testing.T) {
 	now := time.Date(2026, 3, 19, 10, 0, 0, 0, time.UTC)
 	var updatedIDs []int64
-	var published ExpiredSummary
+	var published domain.ExpiredSummary
 
 	repo := &stubTaskRepo{
 		createFunc:                     func(ctx context.Context, task domain.Task) (domain.Task, error) { return domain.Task{}, nil },
@@ -189,7 +189,7 @@ func TestTaskServiceProcessRecentExpired(t *testing.T) {
 	}
 
 	svc := NewTaskService(repo, stubTokenParser{}, stubEventPublisher{
-		publishFunc: func(ctx context.Context, summary ExpiredSummary) error {
+		publishFunc: func(ctx context.Context, summary domain.ExpiredSummary) error {
 			published = summary
 			return nil
 		},

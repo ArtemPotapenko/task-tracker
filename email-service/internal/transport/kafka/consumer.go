@@ -41,13 +41,13 @@ func (c *Consumer) ConsumeRegister(ctx context.Context, reader MessageReader, er
 		}
 		logger.Log.Infof("kafka register: message received")
 
-		var payload usecase.RegisterMessage
+		var payload RegisterMessage
 		if err := json.Unmarshal(msg.Value, &payload); err != nil {
 			logger.Log.Infof("kafka register: invalid payload err=%v", err)
 			_ = reader.CommitMessages(ctx, msg)
 			continue
 		}
-		if err := c.service.SendWelcome(ctx, payload); err != nil {
+		if err := c.service.SendWelcome(ctx, payload.Email); err != nil {
 			logger.Log.Infof("send welcome: %v", err)
 		}
 		_ = reader.CommitMessages(ctx, msg)
@@ -65,7 +65,7 @@ func (c *Consumer) ConsumeDaily(ctx context.Context, reader MessageReader, users
 			return
 		}
 
-		var payload usecase.DailySummaryMessage
+		var payload DailySummaryMessage
 		if err := json.Unmarshal(msg.Value, &payload); err != nil {
 			logger.Log.Infof("kafka daily: invalid payload err=%v", err)
 			_ = reader.CommitMessages(ctx, msg)

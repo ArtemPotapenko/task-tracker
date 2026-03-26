@@ -125,7 +125,7 @@ func (taskTestTokenParser) ParseUserID(token string) (int64, error) {
 
 type taskTestPublisher struct{}
 
-func (taskTestPublisher) PublishExpiredSummary(ctx context.Context, summary usecase.ExpiredSummary) error {
+func (taskTestPublisher) PublishExpiredSummary(ctx context.Context, summary domain.ExpiredSummary) error {
 	return nil
 }
 

@@ -18,6 +18,10 @@ type TokenParser interface {
 	ParseUserID(token string) (int64, error)
 }
 
+type TaskEventPublisher interface {
+	PublishExpiredSummary(ctx context.Context, summary domain.ExpiredSummary) error
+}
+
 type TaskService struct {
 	repo   domain.TaskRepository
 	tokens TokenParser
@@ -122,18 +126,18 @@ func (s *TaskService) ProcessRecentExpired(ctx context.Context) error {
 		return err
 	}
 
-	summary := ExpiredSummary{
+	summary := domain.ExpiredSummary{
 		WindowStart: from,
 		WindowEnd:   now,
-		Users:       make([]UserExpiredSummary, 0),
+		Users:       make([]domain.UserExpiredSummary, 0),
 	}
 
-	counts := make(map[int64]*UserExpiredSummary)
+	counts := make(map[int64]*domain.UserExpiredSummary)
 	var toExpire []int64
 	for _, task := range tasks {
 		stats, ok := counts[task.UserID]
 		if !ok {
-			stats = &UserExpiredSummary{UserID: task.UserID}
+			stats = &domain.UserExpiredSummary{UserID: task.UserID}
 			counts[task.UserID] = stats
 		}
 

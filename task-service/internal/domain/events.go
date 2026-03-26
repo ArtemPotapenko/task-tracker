@@ -1,9 +1,6 @@
-package usecase
+package domain
 
-import (
-	"context"
-	"time"
-)
+import "time"
 
 type UserExpiredSummary struct {
 	UserID       int64
@@ -15,8 +12,4 @@ type ExpiredSummary struct {
 	WindowStart time.Time
 	WindowEnd   time.Time
 	Users       []UserExpiredSummary
-}
-
-type TaskEventPublisher interface {
-	PublishExpiredSummary(ctx context.Context, summary ExpiredSummary) error
 }

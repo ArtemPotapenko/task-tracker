@@ -50,7 +50,7 @@ func TestServiceSendWelcome(t *testing.T) {
 			time.Hour,
 		)
 
-		if err := svc.SendWelcome(context.Background(), RegisterMessage{Email: "User@Example.com"}); err != nil {
+		if err := svc.SendWelcome(context.Background(), "User@Example.com"); err != nil {
 			t.Fatalf("SendWelcome() error = %v", err)
 		}
 		if !sent {
@@ -70,7 +70,7 @@ func TestServiceSendWelcome(t *testing.T) {
 			time.Hour,
 		)
 
-		if err := svc.SendWelcome(context.Background(), RegisterMessage{Email: "user@example.com"}); err != nil {
+		if err := svc.SendWelcome(context.Background(), "user@example.com"); err != nil {
 			t.Fatalf("SendWelcome() error = %v, want nil", err)
 		}
 	})

@@ -53,7 +53,7 @@ func (allowAllDedupe) Once(ctx context.Context, key string, ttl time.Duration) (
 }
 
 func TestConsumerConsumeRegister(t *testing.T) {
-	payload, _ := json.Marshal(usecase.RegisterMessage{Email: "user@example.com"})
+	payload, _ := json.Marshal(RegisterMessage{Email: "user@example.com"})
 	reader := &stubReader{messages: []Message{{Value: payload}}}
 	mailer := &recordMailer{}
 	service := usecase.NewService(mailer, allowAllDedupe{}, time.Hour)
@@ -76,9 +76,9 @@ func TestConsumerConsumeRegister(t *testing.T) {
 }
 
 func TestConsumerConsumeDaily(t *testing.T) {
-	payload, _ := json.Marshal(usecase.DailySummaryMessage{
+	payload, _ := json.Marshal(DailySummaryMessage{
 		Date: "2026-03-19",
-		Users: []usecase.DailySummaryUser{
+		Users: []DailySummaryUser{
 			{UserID: 1, Completed: 2, NotCompleted: 1},
 			{UserID: 2, Completed: 1, NotCompleted: 4},
 		},

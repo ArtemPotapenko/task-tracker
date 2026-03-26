@@ -8,7 +8,7 @@ import (
 	"github.com/segmentio/kafka-go"
 
 	"task-tracker/shared-libs/pkg/logger"
-	"task-tracker/task-service/internal/usecase"
+	"task-tracker/task-service/internal/domain"
 )
 
 type ExpiredSummaryMessage struct {
@@ -31,7 +31,7 @@ func NewPublisher(writer *kafka.Writer) *Publisher {
 	return &Publisher{writer: writer}
 }
 
-func (p *Publisher) PublishExpiredSummary(ctx context.Context, summary usecase.ExpiredSummary) error {
+func (p *Publisher) PublishExpiredSummary(ctx context.Context, summary domain.ExpiredSummary) error {
 	users := make([]UserSummaryMessage, 0, len(summary.Users))
 	for _, user := range summary.Users {
 		users = append(users, UserSummaryMessage{
