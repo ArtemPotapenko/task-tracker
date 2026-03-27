@@ -18,6 +18,7 @@ func TestTaskRepositoryIntegration(t *testing.T) {
 	}
 
 	repo := NewTaskRepository(db)
+	outboxRepo := NewOutboxRepository(db)
 	ctx := context.Background()
 	now := time.Date(2026, 3, 19, 10, 0, 0, 0, time.UTC)
 
@@ -54,5 +55,24 @@ func TestTaskRepositoryIntegration(t *testing.T) {
 	}
 	if updated.Status != domain.COMPLETED {
 		t.Fatalf("UpdateStatusByIDAndUserID() status = %v, want %v", updated.Status, domain.COMPLETED)
+	}
+
+	summary := domain.ExpiredSummary{
+		WindowStart: now.Add(-10 * time.Minute),
+		WindowEnd:   now,
+		Users: []domain.UserExpiredSummary{
+			{UserID: 1, Completed: 1, NotCompleted: 0},
+		},
+	}
+	if err := repo.UpdateExpiredAndEnqueueSummary(ctx, []int64{created.ID}, summary); err != nil {
+		t.Fatalf("UpdateExpiredAndEnqueueSummary() error = %v", err)
+	}
+
+	events, err := outboxRepo.ClaimPending(ctx, 10)
+	if err != nil {
+		t.Fatalf("ClaimPending() error = %v", err)
+	}
+	if len(events) != 1 || events[0].Topic != "daily-summary" {
+		t.Fatalf("ClaimPending() = %+v", events)
 	}
 }

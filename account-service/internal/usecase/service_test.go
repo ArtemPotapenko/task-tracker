@@ -9,13 +9,13 @@ import (
 )
 
 type stubUserRepo struct {
-	getByEmailFunc func(ctx context.Context, email string) (domain.User, error)
-	createFunc     func(ctx context.Context, user domain.User) (domain.User, error)
-	getByIDsFunc   func(ctx context.Context, ids []int64) ([]domain.User, error)
+	getByEmailFunc                func(ctx context.Context, email string) (domain.User, error)
+	createWithRegisteredEventFunc func(ctx context.Context, user domain.User) (domain.User, error)
+	getByIDsFunc                  func(ctx context.Context, ids []int64) ([]domain.User, error)
 }
 
-func (r *stubUserRepo) Create(ctx context.Context, user domain.User) (domain.User, error) {
-	return r.createFunc(ctx, user)
+func (r *stubUserRepo) CreateWithRegisteredEvent(ctx context.Context, user domain.User) (domain.User, error) {
+	return r.createWithRegisteredEventFunc(ctx, user)
 }
 
 func (r *stubUserRepo) GetByEmail(ctx context.Context, email string) (domain.User, error) {
@@ -47,21 +47,13 @@ func (t stubTokens) NewToken(userID int64, email string) (string, error) {
 	return t.newTokenFunc(userID, email)
 }
 
-type stubPublisher struct {
-	publishFunc func(ctx context.Context, email string) error
-}
-
-func (p stubPublisher) PublishRegistered(ctx context.Context, email string) error {
-	return p.publishFunc(ctx, email)
-}
-
 func TestAuthServiceRegister(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		repo := &stubUserRepo{
 			getByEmailFunc: func(ctx context.Context, email string) (domain.User, error) {
 				return domain.User{}, domain.ErrNotFound
 			},
-			createFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
+			createWithRegisteredEventFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
 				if user.PasswordHash != "hashed-secret" {
 					t.Fatalf("unexpected password hash: %q", user.PasswordHash)
 				}
@@ -72,7 +64,6 @@ func TestAuthServiceRegister(t *testing.T) {
 			},
 		}
 
-		published := false
 		svc := NewAuthService(
 			repo,
 			stubHasher{hashFunc: func(password string) (string, error) { return "hashed-secret", nil }},
@@ -81,13 +72,6 @@ func TestAuthServiceRegister(t *testing.T) {
 					t.Fatalf("unexpected token payload: %d %s", userID, email)
 				}
 				return "jwt-token", nil
-			}},
-			stubPublisher{publishFunc: func(ctx context.Context, email string) error {
-				published = true
-				if email != "user@example.com" {
-					t.Fatalf("unexpected published email: %s", email)
-				}
-				return nil
 			}},
 		)
 
@@ -98,9 +82,6 @@ func TestAuthServiceRegister(t *testing.T) {
 		if token != "jwt-token" {
 			t.Fatalf("Register() token = %q, want jwt-token", token)
 		}
-		if !published {
-			t.Fatalf("expected registration event to be published")
-		}
 	})
 
 	t.Run("already exists", func(t *testing.T) {
@@ -109,7 +90,7 @@ func TestAuthServiceRegister(t *testing.T) {
 				getByEmailFunc: func(ctx context.Context, email string) (domain.User, error) {
 					return domain.User{ID: 1, Email: email}, nil
 				},
-				createFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
+				createWithRegisteredEventFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
 					return domain.User{}, nil
 				},
 				getByIDsFunc: func(ctx context.Context, ids []int64) ([]domain.User, error) {
@@ -118,7 +99,6 @@ func TestAuthServiceRegister(t *testing.T) {
 			},
 			stubHasher{hashFunc: func(password string) (string, error) { return "", nil }},
 			stubTokens{newTokenFunc: func(userID int64, email string) (string, error) { return "", nil }},
-			nil,
 		)
 
 		_, err := svc.Register(context.Background(), "user@example.com", "secret")
@@ -133,7 +113,7 @@ func TestAuthServiceLogin(t *testing.T) {
 		getByEmailFunc: func(ctx context.Context, email string) (domain.User, error) {
 			return domain.User{ID: 7, Email: email, PasswordHash: "stored-hash"}, nil
 		},
-		createFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
+		createWithRegisteredEventFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
 			return domain.User{}, nil
 		},
 		getByIDsFunc: func(ctx context.Context, ids []int64) ([]domain.User, error) {
@@ -150,7 +130,6 @@ func TestAuthServiceLogin(t *testing.T) {
 			stubTokens{newTokenFunc: func(userID int64, email string) (string, error) {
 				return "jwt-token", nil
 			}},
-			nil,
 		)
 
 		token, err := svc.Login(context.Background(), "user@example.com", "secret")
@@ -167,7 +146,6 @@ func TestAuthServiceLogin(t *testing.T) {
 			repo,
 			stubHasher{compareFunc: func(hash string, password string) bool { return false }},
 			stubTokens{newTokenFunc: func(userID int64, email string) (string, error) { return "", nil }},
-			nil,
 		)
 
 		_, err := svc.Login(context.Background(), "user@example.com", "bad-password")
@@ -182,7 +160,7 @@ func TestAuthServiceGetUsersByIDs(t *testing.T) {
 		getByEmailFunc: func(ctx context.Context, email string) (domain.User, error) {
 			return domain.User{}, nil
 		},
-		createFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
+		createWithRegisteredEventFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
 			return domain.User{}, nil
 		},
 		getByIDsFunc: func(ctx context.Context, ids []int64) ([]domain.User, error) {
@@ -194,7 +172,6 @@ func TestAuthServiceGetUsersByIDs(t *testing.T) {
 		repo,
 		stubHasher{},
 		stubTokens{},
-		nil,
 	)
 
 	users, err := svc.GetUsersByIDs(context.Background(), []int64{1, 2})

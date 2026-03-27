@@ -2,8 +2,7 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
-	"strconv"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 
@@ -11,55 +10,75 @@ import (
 	"task-tracker/task-service/internal/domain"
 )
 
-type ExpiredSummaryMessage struct {
-	WindowStart int64                `json:"window_start"`
-	WindowEnd   int64                `json:"window_end"`
-	Users       []UserSummaryMessage `json:"users"`
+type messageWriter interface {
+	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
 }
 
-type UserSummaryMessage struct {
-	UserID       int64 `json:"user_id"`
-	Completed    int   `json:"completed"`
-	NotCompleted int   `json:"not_completed"`
+type OutboxPublisher struct {
+	writer       messageWriter
+	outbox       domain.OutboxRepository
+	pollInterval time.Duration
+	batchSize    int
 }
 
-type Publisher struct {
-	writer *kafka.Writer
+func NewOutboxPublisher(writer messageWriter, outbox domain.OutboxRepository, pollInterval time.Duration, batchSize int) *OutboxPublisher {
+	if pollInterval <= 0 {
+		pollInterval = time.Second
+	}
+	if batchSize <= 0 {
+		batchSize = 100
+	}
+	return &OutboxPublisher{writer: writer, outbox: outbox, pollInterval: pollInterval, batchSize: batchSize}
 }
 
-func NewPublisher(writer *kafka.Writer) *Publisher {
-	return &Publisher{writer: writer}
+func (p *OutboxPublisher) Run(ctx context.Context) error {
+	if err := p.publishBatch(ctx); err != nil {
+		logger.Log.Infof("kafka outbox publish: batch error err=%v", err)
+	}
+
+	ticker := time.NewTicker(p.pollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if err := p.publishBatch(ctx); err != nil {
+				logger.Log.Infof("kafka outbox publish: batch error err=%v", err)
+			}
+		}
+	}
 }
 
-func (p *Publisher) PublishExpiredSummary(ctx context.Context, summary domain.ExpiredSummary) error {
-	users := make([]UserSummaryMessage, 0, len(summary.Users))
-	for _, user := range summary.Users {
-		users = append(users, UserSummaryMessage{
-			UserID:       user.UserID,
-			Completed:    user.Completed,
-			NotCompleted: user.NotCompleted,
-		})
-	}
+func (p *OutboxPublisher) publishBatch(ctx context.Context) error {
+	for i := 0; i < p.batchSize; i++ {
+		events, err := p.outbox.ClaimPending(ctx, 1)
+		if err != nil {
+			return err
+		}
+		if len(events) == 0 {
+			return nil
+		}
 
-	payload := ExpiredSummaryMessage{
-		WindowStart: summary.WindowStart.Unix(),
-		WindowEnd:   summary.WindowEnd.Unix(),
-		Users:       users,
-	}
+		event := events[0]
+		msg := kafka.Message{Topic: event.Topic, Value: event.Payload}
+		if event.Key != "" {
+			msg.Key = []byte(event.Key)
+		}
 
-	data, err := json.Marshal(payload)
-	if err != nil {
-		logger.Log.Infof("kafka publish expired summary: marshal error err=%v", err)
-		return err
+		if err := p.writer.WriteMessages(ctx, msg); err != nil {
+			logger.Log.Infof("kafka outbox publish: write error id=%d topic=%s err=%v", event.ID, event.Topic, err)
+			if releaseErr := p.outbox.Release(ctx, event.ID); releaseErr != nil {
+				logger.Log.Infof("kafka outbox publish: release error id=%d err=%v", event.ID, releaseErr)
+			}
+			return err
+		}
+		if err := p.outbox.MarkProcessed(ctx, event.ID); err != nil {
+			logger.Log.Infof("kafka outbox publish: mark processed error id=%d err=%v", event.ID, err)
+			return err
+		}
+		logger.Log.Infof("kafka outbox publish: success id=%d topic=%s", event.ID, event.Topic)
 	}
-
-	if err := p.writer.WriteMessages(ctx, kafka.Message{
-		Key:   []byte(strconv.FormatInt(payload.WindowEnd, 10)),
-		Value: data,
-	}); err != nil {
-		logger.Log.Infof("kafka publish expired summary: write error err=%v", err)
-		return err
-	}
-	logger.Log.Infof("kafka publish expired summary: success users=%d", len(payload.Users))
 	return nil
 }

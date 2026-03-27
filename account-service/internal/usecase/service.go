@@ -18,18 +18,13 @@ type TokenManager interface {
 }
 
 type AuthService struct {
-	repo      domain.UserRepository
-	hasher    PasswordHasher
-	tokens    TokenManager
-	publisher RegistrationPublisher
+	repo   domain.UserRepository
+	hasher PasswordHasher
+	tokens TokenManager
 }
 
-type RegistrationPublisher interface {
-	PublishRegistered(ctx context.Context, email string) error
-}
-
-func NewAuthService(repo domain.UserRepository, hasher PasswordHasher, tokens TokenManager, publisher RegistrationPublisher) *AuthService {
-	return &AuthService{repo: repo, hasher: hasher, tokens: tokens, publisher: publisher}
+func NewAuthService(repo domain.UserRepository, hasher PasswordHasher, tokens TokenManager) *AuthService {
+	return &AuthService{repo: repo, hasher: hasher, tokens: tokens}
 }
 
 func (s *AuthService) Register(ctx context.Context, email string, password string) (string, error) {
@@ -51,19 +46,12 @@ func (s *AuthService) Register(ctx context.Context, email string, password strin
 		return "", err
 	}
 
-	user, err := s.repo.Create(ctx, domain.User{Email: email, PasswordHash: hash})
+	user, err := s.repo.CreateWithRegisteredEvent(ctx, domain.User{Email: email, PasswordHash: hash})
 	if err != nil {
 		logger.Log.Infof("auth register: create user error email=%s err=%v", email, err)
 		return "", err
 	}
 	logger.Log.Infof("auth register: user created id=%d email=%s", user.ID, user.Email)
-
-	if s.publisher != nil {
-		if err := s.publisher.PublishRegistered(ctx, user.Email); err != nil {
-			logger.Log.Infof("auth register: publish registered error email=%s err=%v", user.Email, err)
-			return "", err
-		}
-	}
 
 	token, err := s.tokens.NewToken(user.ID, user.Email)
 	if err != nil {

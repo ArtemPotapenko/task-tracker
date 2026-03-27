@@ -49,6 +49,7 @@ func Run() error {
 	}
 
 	userRepo := repo.NewUserRepository(dbConn)
+	outboxRepo := repo.NewOutboxRepository(dbConn)
 	hasher := &usecase.BcryptHasher{Cost: cfg.BcryptCost}
 	tokens := jwt.Manager{
 		Secret: []byte(cfg.JWTSecret),
@@ -65,8 +66,8 @@ func Run() error {
 		}
 	}()
 
-	publisher := accountkafka.NewPublisher(writer)
-	authSvc := usecase.NewAuthService(&userRepo, hasher, tokens, publisher)
+	outboxPublisher := accountkafka.NewOutboxPublisher(writer, &outboxRepo, time.Second, 100)
+	authSvc := usecase.NewAuthService(&userRepo, hasher, tokens)
 	handler := transportgrpc.NewAuthHandler(authSvc)
 
 	server := grpc.NewServer(grpc.ChainUnaryInterceptor(validationUnaryServerInterceptor, loggingUnaryServerInterceptor))
@@ -80,8 +81,16 @@ func Run() error {
 	}
 
 	errCh := make(chan error, 1)
+	appCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	go func() {
 		errCh <- server.Serve(lis)
+	}()
+	go func() {
+		if err := outboxPublisher.Run(appCtx); err != nil && !errors.Is(err, context.Canceled) {
+			errCh <- fmt.Errorf("outbox publisher: %w", err)
+		}
 	}()
 
 	sigCh := make(chan os.Signal, 1)
@@ -89,10 +98,12 @@ func Run() error {
 
 	select {
 	case err := <-errCh:
+		cancel()
 		if !errors.Is(err, grpc.ErrServerStopped) {
 			return fmt.Errorf("grpc serve: %w", err)
 		}
 	case <-sigCh:
+		cancel()
 		logger.Log.Infof("shutting down")
 		gracefulStop(server, 5*time.Second)
 	}

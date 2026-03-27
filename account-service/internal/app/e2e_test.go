@@ -32,6 +32,10 @@ func newMemoryUserRepo() *memoryUserRepo {
 }
 
 func (r *memoryUserRepo) Create(ctx context.Context, user domain.User) (domain.User, error) {
+	return r.CreateWithRegisteredEvent(ctx, user)
+}
+
+func (r *memoryUserRepo) CreateWithRegisteredEvent(ctx context.Context, user domain.User) (domain.User, error) {
 	if _, ok := r.users[user.Email]; ok {
 		return domain.User{}, domain.ErrUserAlreadyExists
 	}
@@ -78,7 +82,7 @@ func (accountTestTokens) NewToken(userID int64, email string) (string, error) {
 
 func TestAccountServiceE2E(t *testing.T) {
 	repo := newMemoryUserRepo()
-	svc := usecase.NewAuthService(repo, accountTestHasher{}, accountTestTokens{}, nil)
+	svc := usecase.NewAuthService(repo, accountTestHasher{}, accountTestTokens{})
 
 	lis := bufconn.Listen(accountBufSize)
 	server := grpc.NewServer()

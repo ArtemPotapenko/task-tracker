@@ -89,6 +89,18 @@ func (r *memoryTaskRepo) GetByDueDateBetweenAndStatusNot(ctx context.Context, fr
 	return result, nil
 }
 
+func (r *memoryTaskRepo) UpdateExpiredAndEnqueueSummary(ctx context.Context, ids []int64, summary domain.ExpiredSummary) error {
+	for _, id := range ids {
+		task, ok := r.tasks[id]
+		if !ok {
+			continue
+		}
+		task.Status = domain.EXPIRED
+		r.tasks[id] = task
+	}
+	return nil
+}
+
 func (r *memoryTaskRepo) UpdateStatusByIDAndUserID(ctx context.Context, id, userID int64, status domain.TaskStatus) (domain.Task, error) {
 	task, ok := r.tasks[id]
 	if !ok || task.UserID != userID {
@@ -123,19 +135,13 @@ func (taskTestTokenParser) ParseUserID(token string) (int64, error) {
 	return 0, errors.New("invalid token")
 }
 
-type taskTestPublisher struct{}
-
-func (taskTestPublisher) PublishExpiredSummary(ctx context.Context, summary domain.ExpiredSummary) error {
-	return nil
-}
-
 func taskAuthContext(token string) context.Context {
 	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
 }
 
 func TestTaskServiceE2E(t *testing.T) {
 	repo := newMemoryTaskRepo()
-	svc := usecase.NewTaskService(repo, taskTestTokenParser{}, taskTestPublisher{})
+	svc := usecase.NewTaskService(repo, taskTestTokenParser{})
 
 	lis := bufconn.Listen(taskBufSize)
 	server := grpc.NewServer()

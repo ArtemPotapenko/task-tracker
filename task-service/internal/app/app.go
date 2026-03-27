@@ -49,6 +49,7 @@ func Run() error {
 	}
 
 	taskRepo := repo.NewTaskRepository(dbConn)
+	outboxRepo := repo.NewOutboxRepository(dbConn)
 	parser := pkgjwt.Parser{Secret: []byte(cfg.JWTSecret)}
 
 	writer, err := kafka.NewWriter(cfg.KafkaBroker, cfg.KafkaTopic)
@@ -61,8 +62,8 @@ func Run() error {
 		}
 	}()
 
-	publisher := taskkafka.NewPublisher(writer)
-	taskSvc := usecase.NewTaskService(&taskRepo, parser, publisher)
+	outboxPublisher := taskkafka.NewOutboxPublisher(writer, &outboxRepo, time.Second, 100)
+	taskSvc := usecase.NewTaskService(&taskRepo, parser)
 	taskHandler := transportgrpc.NewTaskHandler(taskSvc)
 	schedulerHandler := transportgrpc.NewSchedulerHandler(taskSvc)
 
@@ -76,8 +77,15 @@ func Run() error {
 	}
 
 	errCh := make(chan error, 1)
+	appCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	go func() {
 		errCh <- server.Serve(lis)
+	}()
+	go func() {
+		if err := outboxPublisher.Run(appCtx); err != nil && !errors.Is(err, context.Canceled) {
+			errCh <- fmt.Errorf("outbox publisher: %w", err)
+		}
 	}()
 
 	sigCh := make(chan os.Signal, 1)
@@ -85,10 +93,12 @@ func Run() error {
 
 	select {
 	case err := <-errCh:
+		cancel()
 		if !errors.Is(err, grpc.ErrServerStopped) {
 			return fmt.Errorf("grpc serve: %w", err)
 		}
 	case <-sigCh:
+		cancel()
 		logger.Log.Infof("shutting down")
 		gracefulStop(server, 5*time.Second)
 	}

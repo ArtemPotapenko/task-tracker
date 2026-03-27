@@ -3,8 +3,10 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Masterminds/squirrel"
@@ -21,6 +23,18 @@ const taskColumns = "id, user_id, description, status, date, due_date"
 
 func NewTaskRepository(conn *sql.DB) TaskRepository {
 	return TaskRepository{conn: conn}
+}
+
+type expiredSummaryMessage struct {
+	WindowStart int64                `json:"window_start"`
+	WindowEnd   int64                `json:"window_end"`
+	Users       []userSummaryMessage `json:"users"`
+}
+
+type userSummaryMessage struct {
+	UserID       int64 `json:"user_id"`
+	Completed    int   `json:"completed"`
+	NotCompleted int   `json:"not_completed"`
 }
 
 func (r *TaskRepository) Create(ctx context.Context, task domain.Task) (domain.Task, error) {
@@ -280,6 +294,70 @@ func (r *TaskRepository) UpdateStatusByIDs(ctx context.Context, ids []int64, sta
 
 	if _, err := r.conn.ExecContext(ctx, query, args...); err != nil {
 		return fmt.Errorf("update tasks: %w", err)
+	}
+	return nil
+}
+
+func (r *TaskRepository) UpdateExpiredAndEnqueueSummary(ctx context.Context, ids []int64, summary domain.ExpiredSummary) (err error) {
+	tx, err := r.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if len(ids) > 0 {
+		query, args, err := squirrel.Update("tasks").
+			Set("status", domain.EXPIRED).
+			Where(squirrel.Eq{"id": ids}).
+			PlaceholderFormat(squirrel.Dollar).
+			ToSql()
+		if err != nil {
+			return fmt.Errorf("build update tasks query: %w", err)
+		}
+		logger.Log.Infof("sql: %s", query)
+
+		if _, err = tx.ExecContext(ctx, query, args...); err != nil {
+			return fmt.Errorf("update tasks: %w", err)
+		}
+	}
+
+	users := make([]userSummaryMessage, 0, len(summary.Users))
+	for _, user := range summary.Users {
+		users = append(users, userSummaryMessage{
+			UserID:       user.UserID,
+			Completed:    user.Completed,
+			NotCompleted: user.NotCompleted,
+		})
+	}
+	payload, err := json.Marshal(expiredSummaryMessage{
+		WindowStart: summary.WindowStart.Unix(),
+		WindowEnd:   summary.WindowEnd.Unix(),
+		Users:       users,
+	})
+	if err != nil {
+		return fmt.Errorf("marshal expired summary: %w", err)
+	}
+
+	outboxQuery, outboxArgs, err := squirrel.Insert("outbox_events").
+		Columns("topic", "message_key", "payload").
+		Values("daily-summary", strconv.FormatInt(summary.WindowEnd.Unix(), 10), payload).
+		PlaceholderFormat(squirrel.Dollar).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("build insert outbox query: %w", err)
+	}
+	logger.Log.Infof("sql: %s", outboxQuery)
+
+	if _, err = tx.ExecContext(ctx, outboxQuery, outboxArgs...); err != nil {
+		return fmt.Errorf("insert outbox event: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit tx: %w", err)
 	}
 	return nil
 }

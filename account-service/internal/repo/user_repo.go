@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -20,7 +21,21 @@ func NewUserRepository(conn *sql.DB) UserRepository {
 	return UserRepository{conn: conn}
 }
 
-func (r *UserRepository) Create(ctx context.Context, user domain.User) (domain.User, error) {
+type registerMessage struct {
+	Email string `json:"email"`
+}
+
+func (r *UserRepository) CreateWithRegisteredEvent(ctx context.Context, user domain.User) (domain.User, error) {
+	tx, err := r.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
 	query, args, err := squirrel.Insert("users").
 		Columns("email", "password").
 		Values(user.Email, user.PasswordHash).
@@ -33,8 +48,31 @@ func (r *UserRepository) Create(ctx context.Context, user domain.User) (domain.U
 	logger.Log.Infof("sql: %s", query)
 
 	var id int64
-	if err := r.conn.QueryRowContext(ctx, query, args...).Scan(&id); err != nil {
+	if err = tx.QueryRowContext(ctx, query, args...).Scan(&id); err != nil {
 		return domain.User{}, fmt.Errorf("insert user: %w", err)
+	}
+
+	payload, err := json.Marshal(registerMessage{Email: user.Email})
+	if err != nil {
+		return domain.User{}, fmt.Errorf("marshal register event: %w", err)
+	}
+
+	outboxQuery, outboxArgs, err := squirrel.Insert("outbox_events").
+		Columns("topic", "message_key", "payload").
+		Values("register", user.Email, payload).
+		PlaceholderFormat(squirrel.Dollar).
+		ToSql()
+	if err != nil {
+		return domain.User{}, fmt.Errorf("build insert outbox query: %w", err)
+	}
+	logger.Log.Infof("sql: %s", outboxQuery)
+
+	if _, err = tx.ExecContext(ctx, outboxQuery, outboxArgs...); err != nil {
+		return domain.User{}, fmt.Errorf("insert outbox event: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return domain.User{}, fmt.Errorf("commit tx: %w", err)
 	}
 
 	user.ID = id

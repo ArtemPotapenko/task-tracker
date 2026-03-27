@@ -17,9 +17,10 @@ func TestUserRepositoryIntegration(t *testing.T) {
 	}
 
 	repo := NewUserRepository(db)
+	outboxRepo := NewOutboxRepository(db)
 	ctx := context.Background()
 
-	created, err := repo.Create(ctx, domain.User{
+	created, err := repo.CreateWithRegisteredEvent(ctx, domain.User{
 		Email:        "user@example.com",
 		PasswordHash: "hash",
 	})
@@ -44,5 +45,13 @@ func TestUserRepositoryIntegration(t *testing.T) {
 	}
 	if len(users) != 1 || users[0].ID != created.ID {
 		t.Fatalf("GetByIDs() = %+v", users)
+	}
+
+	events, err := outboxRepo.ClaimPending(ctx, 10)
+	if err != nil {
+		t.Fatalf("ClaimPending() error = %v", err)
+	}
+	if len(events) != 1 || events[0].Topic != "register" {
+		t.Fatalf("ClaimPending() = %+v", events)
 	}
 }

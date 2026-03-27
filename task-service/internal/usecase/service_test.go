@@ -16,6 +16,7 @@ type stubTaskRepo struct {
 	getByUserIDAndDueDateBetweenFn func(ctx context.Context, userID int64, from, to time.Time) ([]domain.Task, error)
 	getByDueDateBetweenFunc        func(ctx context.Context, from, to time.Time) ([]domain.Task, error)
 	getByDueDateStatusNotFunc      func(ctx context.Context, from, to time.Time, status domain.TaskStatus) ([]domain.Task, error)
+	updateExpiredAndEnqueueFunc    func(ctx context.Context, ids []int64, summary domain.ExpiredSummary) error
 	updateStatusByIDAndUserIDFunc  func(ctx context.Context, id, userID int64, status domain.TaskStatus) (domain.Task, error)
 	updateStatusByIDsFunc          func(ctx context.Context, ids []int64, status domain.TaskStatus) error
 }
@@ -47,6 +48,10 @@ func (r *stubTaskRepo) GetByDueDateBetweenAndStatusNot(ctx context.Context, from
 	return r.getByDueDateStatusNotFunc(ctx, from, to, status)
 }
 
+func (r *stubTaskRepo) UpdateExpiredAndEnqueueSummary(ctx context.Context, ids []int64, summary domain.ExpiredSummary) error {
+	return r.updateExpiredAndEnqueueFunc(ctx, ids, summary)
+}
+
 func (r *stubTaskRepo) UpdateStatusByIDAndUserID(ctx context.Context, id, userID int64, status domain.TaskStatus) (domain.Task, error) {
 	return r.updateStatusByIDAndUserIDFunc(ctx, id, userID, status)
 }
@@ -61,14 +66,6 @@ type stubTokenParser struct {
 
 func (p stubTokenParser) ParseUserID(token string) (int64, error) {
 	return p.parseUserIDFunc(token)
-}
-
-type stubEventPublisher struct {
-	publishFunc func(ctx context.Context, summary domain.ExpiredSummary) error
-}
-
-func (p stubEventPublisher) PublishExpiredSummary(ctx context.Context, summary domain.ExpiredSummary) error {
-	return p.publishFunc(ctx, summary)
 }
 
 func TestTaskServiceCreate(t *testing.T) {
@@ -87,6 +84,7 @@ func TestTaskServiceCreate(t *testing.T) {
 		getByDueDateStatusNotFunc: func(ctx context.Context, from, to time.Time, status domain.TaskStatus) ([]domain.Task, error) {
 			return nil, nil
 		},
+		updateExpiredAndEnqueueFunc: func(ctx context.Context, ids []int64, summary domain.ExpiredSummary) error { return nil },
 		updateStatusByIDAndUserIDFunc: func(ctx context.Context, id, userID int64, status domain.TaskStatus) (domain.Task, error) {
 			return domain.Task{}, nil
 		},
@@ -96,7 +94,6 @@ func TestTaskServiceCreate(t *testing.T) {
 	svc := NewTaskService(
 		repo,
 		stubTokenParser{parseUserIDFunc: func(token string) (int64, error) { return 42, nil }},
-		nil,
 	)
 	now := time.Date(2026, 3, 19, 10, 0, 0, 0, time.UTC)
 	svc.now = func() time.Time { return now }
@@ -129,6 +126,7 @@ func TestTaskServiceGetToday(t *testing.T) {
 		getByDueDateStatusNotFunc: func(ctx context.Context, from, to time.Time, status domain.TaskStatus) ([]domain.Task, error) {
 			return nil, nil
 		},
+		updateExpiredAndEnqueueFunc: func(ctx context.Context, ids []int64, summary domain.ExpiredSummary) error { return nil },
 		updateStatusByIDAndUserIDFunc: func(ctx context.Context, id, userID int64, status domain.TaskStatus) (domain.Task, error) {
 			return domain.Task{}, nil
 		},
@@ -138,7 +136,6 @@ func TestTaskServiceGetToday(t *testing.T) {
 	svc := NewTaskService(
 		repo,
 		stubTokenParser{parseUserIDFunc: func(token string) (int64, error) { return 7, nil }},
-		nil,
 	)
 	svc.now = func() time.Time { return now }
 
@@ -159,7 +156,7 @@ func TestTaskServiceGetToday(t *testing.T) {
 func TestTaskServiceProcessRecentExpired(t *testing.T) {
 	now := time.Date(2026, 3, 19, 10, 0, 0, 0, time.UTC)
 	var updatedIDs []int64
-	var published domain.ExpiredSummary
+	var enqueued domain.ExpiredSummary
 
 	repo := &stubTaskRepo{
 		createFunc:                     func(ctx context.Context, task domain.Task) (domain.Task, error) { return domain.Task{}, nil },
@@ -176,24 +173,18 @@ func TestTaskServiceProcessRecentExpired(t *testing.T) {
 		getByDueDateStatusNotFunc: func(ctx context.Context, from, to time.Time, status domain.TaskStatus) ([]domain.Task, error) {
 			return nil, nil
 		},
+		updateExpiredAndEnqueueFunc: func(ctx context.Context, ids []int64, summary domain.ExpiredSummary) error {
+			updatedIDs = append([]int64(nil), ids...)
+			enqueued = summary
+			return nil
+		},
 		updateStatusByIDAndUserIDFunc: func(ctx context.Context, id, userID int64, status domain.TaskStatus) (domain.Task, error) {
 			return domain.Task{}, nil
 		},
-		updateStatusByIDsFunc: func(ctx context.Context, ids []int64, status domain.TaskStatus) error {
-			updatedIDs = append([]int64(nil), ids...)
-			if status != domain.EXPIRED {
-				t.Fatalf("unexpected status = %v", status)
-			}
-			return nil
-		},
+		updateStatusByIDsFunc: func(ctx context.Context, ids []int64, status domain.TaskStatus) error { return nil },
 	}
 
-	svc := NewTaskService(repo, stubTokenParser{}, stubEventPublisher{
-		publishFunc: func(ctx context.Context, summary domain.ExpiredSummary) error {
-			published = summary
-			return nil
-		},
-	})
+	svc := NewTaskService(repo, stubTokenParser{})
 	svc.now = func() time.Time { return now }
 
 	if err := svc.ProcessRecentExpired(context.Background()); err != nil {
@@ -202,8 +193,8 @@ func TestTaskServiceProcessRecentExpired(t *testing.T) {
 	if len(updatedIDs) != 2 || updatedIDs[0] != 1 || updatedIDs[1] != 3 {
 		t.Fatalf("ProcessRecentExpired() updated IDs = %v, want [1 3]", updatedIDs)
 	}
-	if len(published.Users) != 2 {
-		t.Fatalf("ProcessRecentExpired() summary users = %d, want 2", len(published.Users))
+	if len(enqueued.Users) != 2 {
+		t.Fatalf("ProcessRecentExpired() summary users = %d, want 2", len(enqueued.Users))
 	}
 }
 
@@ -220,6 +211,7 @@ func TestTaskServiceUpdateStatusRejectsInvalidToken(t *testing.T) {
 		getByDueDateStatusNotFunc: func(ctx context.Context, from, to time.Time, status domain.TaskStatus) ([]domain.Task, error) {
 			return nil, nil
 		},
+		updateExpiredAndEnqueueFunc: func(ctx context.Context, ids []int64, summary domain.ExpiredSummary) error { return nil },
 		updateStatusByIDAndUserIDFunc: func(ctx context.Context, id, userID int64, status domain.TaskStatus) (domain.Task, error) {
 			return domain.Task{}, nil
 		},
@@ -229,7 +221,6 @@ func TestTaskServiceUpdateStatusRejectsInvalidToken(t *testing.T) {
 	svc := NewTaskService(
 		repo,
 		stubTokenParser{parseUserIDFunc: func(token string) (int64, error) { return 0, errors.New("bad token") }},
-		nil,
 	)
 
 	_, err := svc.UpdateStatus(context.Background(), "bad", 1, domain.COMPLETED)
@@ -250,6 +241,7 @@ func TestTaskServiceUpdateStatusRejectsForeignTask(t *testing.T) {
 		getByDueDateStatusNotFunc: func(ctx context.Context, from, to time.Time, status domain.TaskStatus) ([]domain.Task, error) {
 			return nil, nil
 		},
+		updateExpiredAndEnqueueFunc: func(ctx context.Context, ids []int64, summary domain.ExpiredSummary) error { return nil },
 		updateStatusByIDAndUserIDFunc: func(ctx context.Context, id, userID int64, status domain.TaskStatus) (domain.Task, error) {
 			t.Fatalf("UpdateStatusByIDAndUserID() should not be called for foreign task")
 			return domain.Task{}, nil
@@ -260,7 +252,6 @@ func TestTaskServiceUpdateStatusRejectsForeignTask(t *testing.T) {
 	svc := NewTaskService(
 		repo,
 		stubTokenParser{parseUserIDFunc: func(token string) (int64, error) { return 42, nil }},
-		nil,
 	)
 
 	_, err := svc.UpdateStatus(context.Background(), "jwt", 1, domain.COMPLETED)

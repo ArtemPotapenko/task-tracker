@@ -18,19 +18,14 @@ type TokenParser interface {
 	ParseUserID(token string) (int64, error)
 }
 
-type TaskEventPublisher interface {
-	PublishExpiredSummary(ctx context.Context, summary domain.ExpiredSummary) error
-}
-
 type TaskService struct {
 	repo   domain.TaskRepository
 	tokens TokenParser
-	events TaskEventPublisher
 	now    func() time.Time
 }
 
-func NewTaskService(repo domain.TaskRepository, tokens TokenParser, events TaskEventPublisher) *TaskService {
-	return &TaskService{repo: repo, tokens: tokens, events: events, now: time.Now}
+func NewTaskService(repo domain.TaskRepository, tokens TokenParser) *TaskService {
+	return &TaskService{repo: repo, tokens: tokens, now: time.Now}
 }
 
 func (s *TaskService) Create(ctx context.Context, token, description string, dueDate time.Time) (domain.Task, error) {
@@ -153,17 +148,8 @@ func (s *TaskService) ProcessRecentExpired(ctx context.Context) error {
 		summary.Users = append(summary.Users, *stats)
 	}
 
-	if err := s.repo.UpdateStatusByIDs(ctx, toExpire, domain.EXPIRED); err != nil {
-		logger.Log.Infof("task process recent expired: update status error count=%d err=%v", len(toExpire), err)
-		return err
-	}
-
-	if s.events == nil {
-		logger.Log.Infof("task process recent expired: no publisher count=%d", len(summary.Users))
-		return nil
-	}
-	if err := s.events.PublishExpiredSummary(ctx, summary); err != nil {
-		logger.Log.Infof("task process recent expired: publish error err=%v", err)
+	if err := s.repo.UpdateExpiredAndEnqueueSummary(ctx, toExpire, summary); err != nil {
+		logger.Log.Infof("task process recent expired: update/enqueue error count=%d err=%v", len(toExpire), err)
 		return err
 	}
 	logger.Log.Infof("task process recent expired: success users=%d", len(summary.Users))
