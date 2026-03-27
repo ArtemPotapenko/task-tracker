@@ -158,7 +158,7 @@ func toProtoStatus(status domain.TaskStatus) taskpb.TaskStatus {
 	case domain.EXPIRED:
 		return taskpb.TaskStatus_TASK_STATUS_EXPIRED
 	default:
-		return taskpb.TaskStatus_TASK_STATUS_CREATED
+		return taskpb.TaskStatus_TASK_STATUS_UNKNOWN
 	}
 }
 

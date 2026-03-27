@@ -516,7 +516,7 @@ func (m *UpdateTaskStatusRequest) validate(all bool) error {
 	if _, ok := _UpdateTaskStatusRequest_Status_NotInLookup[m.GetStatus()]; ok {
 		err := UpdateTaskStatusRequestValidationError{
 			field:  "Status",
-			reason: "value must not be in list [TASK_STATUS_EXPIRED]",
+			reason: "value must not be in list [TASK_STATUS_UNKNOWN TASK_STATUS_EXPIRED]",
 		}
 		if !all {
 			return err
@@ -616,7 +616,8 @@ var _ interface {
 } = UpdateTaskStatusRequestValidationError{}
 
 var _UpdateTaskStatusRequest_Status_NotInLookup = map[TaskStatus]struct{}{
-	3: {},
+	0: {},
+	4: {},
 }
 
 // Validate checks the field values on TaskResponse with the rules defined in

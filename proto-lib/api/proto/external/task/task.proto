@@ -8,10 +8,11 @@ import "google/api/annotations.proto";
 import "validate/validate.proto";
 
 enum TaskStatus {
-  TASK_STATUS_CREATED = 0;
-  TASK_STATUS_AT_WORK = 1;
-  TASK_STATUS_COMPLETED = 2;
-  TASK_STATUS_EXPIRED = 3;
+  TASK_STATUS_UNKNOWN = 0;
+  TASK_STATUS_CREATED = 1;
+  TASK_STATUS_AT_WORK = 2;
+  TASK_STATUS_COMPLETED = 3;
+  TASK_STATUS_EXPIRED = 4;
 }
 
 message Task {
@@ -38,7 +39,7 @@ message UpdateTaskStatusRequest {
   int64 id = 1 [(validate.rules).int64.gt = 0];
   TaskStatus status = 2 [(validate.rules).enum = {
     defined_only: true
-    not_in: [3]
+    not_in: [0, 4]
   }];
 }
 

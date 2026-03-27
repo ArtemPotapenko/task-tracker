@@ -228,12 +228,13 @@
     "v1TaskStatus": {
       "type": "string",
       "enum": [
+        "TASK_STATUS_UNKNOWN",
         "TASK_STATUS_CREATED",
         "TASK_STATUS_AT_WORK",
         "TASK_STATUS_COMPLETED",
         "TASK_STATUS_EXPIRED"
       ],
-      "default": "TASK_STATUS_CREATED"
+      "default": "TASK_STATUS_UNKNOWN"
     },
     "v1TasksResponse": {
       "type": "object",

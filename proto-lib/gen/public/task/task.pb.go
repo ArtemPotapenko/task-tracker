@@ -26,25 +26,28 @@ const (
 type TaskStatus int32
 
 const (
-	TaskStatus_TASK_STATUS_CREATED   TaskStatus = 0
-	TaskStatus_TASK_STATUS_AT_WORK   TaskStatus = 1
-	TaskStatus_TASK_STATUS_COMPLETED TaskStatus = 2
-	TaskStatus_TASK_STATUS_EXPIRED   TaskStatus = 3
+	TaskStatus_TASK_STATUS_UNKNOWN   TaskStatus = 0
+	TaskStatus_TASK_STATUS_CREATED   TaskStatus = 1
+	TaskStatus_TASK_STATUS_AT_WORK   TaskStatus = 2
+	TaskStatus_TASK_STATUS_COMPLETED TaskStatus = 3
+	TaskStatus_TASK_STATUS_EXPIRED   TaskStatus = 4
 )
 
 // Enum value maps for TaskStatus.
 var (
 	TaskStatus_name = map[int32]string{
-		0: "TASK_STATUS_CREATED",
-		1: "TASK_STATUS_AT_WORK",
-		2: "TASK_STATUS_COMPLETED",
-		3: "TASK_STATUS_EXPIRED",
+		0: "TASK_STATUS_UNKNOWN",
+		1: "TASK_STATUS_CREATED",
+		2: "TASK_STATUS_AT_WORK",
+		3: "TASK_STATUS_COMPLETED",
+		4: "TASK_STATUS_EXPIRED",
 	}
 	TaskStatus_value = map[string]int32{
-		"TASK_STATUS_CREATED":   0,
-		"TASK_STATUS_AT_WORK":   1,
-		"TASK_STATUS_COMPLETED": 2,
-		"TASK_STATUS_EXPIRED":   3,
+		"TASK_STATUS_UNKNOWN":   0,
+		"TASK_STATUS_CREATED":   1,
+		"TASK_STATUS_AT_WORK":   2,
+		"TASK_STATUS_COMPLETED": 3,
+		"TASK_STATUS_EXPIRED":   4,
 	}
 )
 
@@ -142,7 +145,7 @@ func (x *Task) GetStatus() TaskStatus {
 	if x != nil {
 		return x.Status
 	}
-	return TaskStatus_TASK_STATUS_CREATED
+	return TaskStatus_TASK_STATUS_UNKNOWN
 }
 
 func (x *Task) GetCreatedAt() int64 {
@@ -340,7 +343,7 @@ func (x *UpdateTaskStatusRequest) GetStatus() TaskStatus {
 	if x != nil {
 		return x.Status
 	}
-	return TaskStatus_TASK_STATUS_CREATED
+	return TaskStatus_TASK_STATUS_UNKNOWN
 }
 
 type TaskResponse struct {
@@ -449,21 +452,21 @@ const file_task_task_proto_rawDesc = "" +
 	"\x0fGetTasksRequest\"b\n" +
 	"\x11CreateTaskRequest\x12)\n" +
 	"\vdescription\x18\x01 \x01(\tB\a\xfaB\x04r\x02\x10\x01R\vdescription\x12\"\n" +
-	"\bdue_date\x18\x02 \x01(\x03B\a\xfaB\x04\"\x02 \x00R\adueDate\"k\n" +
+	"\bdue_date\x18\x02 \x01(\x03B\a\xfaB\x04\"\x02 \x00R\adueDate\"m\n" +
 	"\x17UpdateTaskStatusRequest\x12\x17\n" +
-	"\x02id\x18\x01 \x01(\x03B\a\xfaB\x04\"\x02 \x00R\x02id\x127\n" +
-	"\x06status\x18\x02 \x01(\x0e2\x13.task.v1.TaskStatusB\n" +
-	"\xfaB\a\x82\x01\x04\x10\x01 \x03R\x06status\"1\n" +
+	"\x02id\x18\x01 \x01(\x03B\a\xfaB\x04\"\x02 \x00R\x02id\x129\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x13.task.v1.TaskStatusB\f\xfaB\t\x82\x01\x06\x10\x01 \x00 \x04R\x06status\"1\n" +
 	"\fTaskResponse\x12!\n" +
 	"\x04task\x18\x01 \x01(\v2\r.task.v1.TaskR\x04task\"4\n" +
 	"\rTasksResponse\x12#\n" +
-	"\x05tasks\x18\x01 \x03(\v2\r.task.v1.TaskR\x05tasks*r\n" +
+	"\x05tasks\x18\x01 \x03(\v2\r.task.v1.TaskR\x05tasks*\x8b\x01\n" +
 	"\n" +
 	"TaskStatus\x12\x17\n" +
-	"\x13TASK_STATUS_CREATED\x10\x00\x12\x17\n" +
-	"\x13TASK_STATUS_AT_WORK\x10\x01\x12\x19\n" +
-	"\x15TASK_STATUS_COMPLETED\x10\x02\x12\x17\n" +
-	"\x13TASK_STATUS_EXPIRED\x10\x032\x82\x03\n" +
+	"\x13TASK_STATUS_UNKNOWN\x10\x00\x12\x17\n" +
+	"\x13TASK_STATUS_CREATED\x10\x01\x12\x17\n" +
+	"\x13TASK_STATUS_AT_WORK\x10\x02\x12\x19\n" +
+	"\x15TASK_STATUS_COMPLETED\x10\x03\x12\x17\n" +
+	"\x13TASK_STATUS_EXPIRED\x10\x042\x82\x03\n" +
 	"\vTaskService\x12Q\n" +
 	"\aGetTask\x12\x17.task.v1.GetTaskRequest\x1a\x15.task.v1.TaskResponse\"\x16\x82\xd3\xe4\x93\x02\x10\x12\x0e/v1/tasks/{id}\x12Z\n" +
 	"\rGetTodayTasks\x12\x18.task.v1.GetTasksRequest\x1a\x16.task.v1.TasksResponse\"\x17\x82\xd3\xe4\x93\x02\x11\x12\x0f/v1/tasks/today\x12U\n" +
