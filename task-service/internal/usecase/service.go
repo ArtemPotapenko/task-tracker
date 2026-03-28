@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"strconv"
 	"time"
 
 	"task-tracker/shared-libs/pkg/logger"
@@ -148,7 +150,25 @@ func (s *TaskService) ProcessRecentExpired(ctx context.Context) error {
 		summary.Users = append(summary.Users, *stats)
 	}
 
-	if err := s.repo.UpdateExpiredAndEnqueueSummary(ctx, toExpire, summary); err != nil {
+	payload, err := json.Marshal(struct {
+		WindowStart int64                       `json:"window_start"`
+		WindowEnd   int64                       `json:"window_end"`
+		Users       []domain.UserExpiredSummary `json:"users"`
+	}{
+		WindowStart: summary.WindowStart.Unix(),
+		WindowEnd:   summary.WindowEnd.Unix(),
+		Users:       summary.Users,
+	})
+	if err != nil {
+		logger.Log.Infof("task process recent expired: marshal outbox payload err=%v", err)
+		return err
+	}
+
+	if err := s.repo.UpdateExpiredAndEnqueueSummary(ctx, toExpire, domain.OutboxEvent{
+		Topic:   "daily-summary",
+		Key:     strconv.FormatInt(summary.WindowEnd.Unix(), 10),
+		Payload: payload,
+	}); err != nil {
 		logger.Log.Infof("task process recent expired: update/enqueue error count=%d err=%v", len(toExpire), err)
 		return err
 	}

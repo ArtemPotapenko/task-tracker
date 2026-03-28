@@ -3,7 +3,6 @@ package repo
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -21,11 +20,7 @@ func NewUserRepository(conn *sql.DB) UserRepository {
 	return UserRepository{conn: conn}
 }
 
-type registerMessage struct {
-	Email string `json:"email"`
-}
-
-func (r *UserRepository) CreateWithRegisteredEvent(ctx context.Context, user domain.User) (domain.User, error) {
+func (r *UserRepository) CreateWithOutboxEvent(ctx context.Context, user domain.User, event domain.OutboxEvent) (domain.User, error) {
 	tx, err := r.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("begin tx: %w", err)
@@ -52,14 +47,9 @@ func (r *UserRepository) CreateWithRegisteredEvent(ctx context.Context, user dom
 		return domain.User{}, fmt.Errorf("insert user: %w", err)
 	}
 
-	payload, err := json.Marshal(registerMessage{Email: user.Email})
-	if err != nil {
-		return domain.User{}, fmt.Errorf("marshal register event: %w", err)
-	}
-
 	outboxQuery, outboxArgs, err := squirrel.Insert("outbox_events").
 		Columns("topic", "message_key", "payload").
-		Values("register", user.Email, payload).
+		Values(event.Topic, event.Key, event.Payload).
 		PlaceholderFormat(squirrel.Dollar).
 		ToSql()
 	if err != nil {

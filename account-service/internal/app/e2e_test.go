@@ -31,11 +31,7 @@ func newMemoryUserRepo() *memoryUserRepo {
 	}
 }
 
-func (r *memoryUserRepo) Create(ctx context.Context, user domain.User) (domain.User, error) {
-	return r.CreateWithRegisteredEvent(ctx, user)
-}
-
-func (r *memoryUserRepo) CreateWithRegisteredEvent(ctx context.Context, user domain.User) (domain.User, error) {
+func (r *memoryUserRepo) CreateWithOutboxEvent(ctx context.Context, user domain.User, event domain.OutboxEvent) (domain.User, error) {
 	if _, ok := r.users[user.Email]; ok {
 		return domain.User{}, domain.ErrUserAlreadyExists
 	}

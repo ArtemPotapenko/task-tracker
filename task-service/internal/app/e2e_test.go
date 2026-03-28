@@ -89,7 +89,7 @@ func (r *memoryTaskRepo) GetByDueDateBetweenAndStatusNot(ctx context.Context, fr
 	return result, nil
 }
 
-func (r *memoryTaskRepo) UpdateExpiredAndEnqueueSummary(ctx context.Context, ids []int64, summary domain.ExpiredSummary) error {
+func (r *memoryTaskRepo) UpdateExpiredAndEnqueueSummary(ctx context.Context, ids []int64, event domain.OutboxEvent) error {
 	for _, id := range ids {
 		task, ok := r.tasks[id]
 		if !ok {

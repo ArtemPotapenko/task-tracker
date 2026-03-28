@@ -9,13 +9,13 @@ import (
 )
 
 type stubUserRepo struct {
-	getByEmailFunc                func(ctx context.Context, email string) (domain.User, error)
-	createWithRegisteredEventFunc func(ctx context.Context, user domain.User) (domain.User, error)
-	getByIDsFunc                  func(ctx context.Context, ids []int64) ([]domain.User, error)
+	getByEmailFunc            func(ctx context.Context, email string) (domain.User, error)
+	createWithOutboxEventFunc func(ctx context.Context, user domain.User, event domain.OutboxEvent) (domain.User, error)
+	getByIDsFunc              func(ctx context.Context, ids []int64) ([]domain.User, error)
 }
 
-func (r *stubUserRepo) CreateWithRegisteredEvent(ctx context.Context, user domain.User) (domain.User, error) {
-	return r.createWithRegisteredEventFunc(ctx, user)
+func (r *stubUserRepo) CreateWithOutboxEvent(ctx context.Context, user domain.User, event domain.OutboxEvent) (domain.User, error) {
+	return r.createWithOutboxEventFunc(ctx, user, event)
 }
 
 func (r *stubUserRepo) GetByEmail(ctx context.Context, email string) (domain.User, error) {
@@ -53,9 +53,12 @@ func TestAuthServiceRegister(t *testing.T) {
 			getByEmailFunc: func(ctx context.Context, email string) (domain.User, error) {
 				return domain.User{}, domain.ErrNotFound
 			},
-			createWithRegisteredEventFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
+			createWithOutboxEventFunc: func(ctx context.Context, user domain.User, event domain.OutboxEvent) (domain.User, error) {
 				if user.PasswordHash != "hashed-secret" {
 					t.Fatalf("unexpected password hash: %q", user.PasswordHash)
+				}
+				if event.Topic != "register" || event.Key != "user@example.com" || len(event.Payload) == 0 {
+					t.Fatalf("unexpected outbox event: %+v", event)
 				}
 				return domain.User{ID: 42, Email: user.Email, PasswordHash: user.PasswordHash}, nil
 			},
@@ -90,7 +93,7 @@ func TestAuthServiceRegister(t *testing.T) {
 				getByEmailFunc: func(ctx context.Context, email string) (domain.User, error) {
 					return domain.User{ID: 1, Email: email}, nil
 				},
-				createWithRegisteredEventFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
+				createWithOutboxEventFunc: func(ctx context.Context, user domain.User, event domain.OutboxEvent) (domain.User, error) {
 					return domain.User{}, nil
 				},
 				getByIDsFunc: func(ctx context.Context, ids []int64) ([]domain.User, error) {
@@ -113,7 +116,7 @@ func TestAuthServiceLogin(t *testing.T) {
 		getByEmailFunc: func(ctx context.Context, email string) (domain.User, error) {
 			return domain.User{ID: 7, Email: email, PasswordHash: "stored-hash"}, nil
 		},
-		createWithRegisteredEventFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
+		createWithOutboxEventFunc: func(ctx context.Context, user domain.User, event domain.OutboxEvent) (domain.User, error) {
 			return domain.User{}, nil
 		},
 		getByIDsFunc: func(ctx context.Context, ids []int64) ([]domain.User, error) {
@@ -160,7 +163,7 @@ func TestAuthServiceGetUsersByIDs(t *testing.T) {
 		getByEmailFunc: func(ctx context.Context, email string) (domain.User, error) {
 			return domain.User{}, nil
 		},
-		createWithRegisteredEventFunc: func(ctx context.Context, user domain.User) (domain.User, error) {
+		createWithOutboxEventFunc: func(ctx context.Context, user domain.User, event domain.OutboxEvent) (domain.User, error) {
 			return domain.User{}, nil
 		},
 		getByIDsFunc: func(ctx context.Context, ids []int64) ([]domain.User, error) {

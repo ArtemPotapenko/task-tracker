@@ -57,14 +57,11 @@ func TestTaskRepositoryIntegration(t *testing.T) {
 		t.Fatalf("UpdateStatusByIDAndUserID() status = %v, want %v", updated.Status, domain.COMPLETED)
 	}
 
-	summary := domain.ExpiredSummary{
-		WindowStart: now.Add(-10 * time.Minute),
-		WindowEnd:   now,
-		Users: []domain.UserExpiredSummary{
-			{UserID: 1, Completed: 1, NotCompleted: 0},
-		},
-	}
-	if err := repo.UpdateExpiredAndEnqueueSummary(ctx, []int64{created.ID}, summary); err != nil {
+	if err := repo.UpdateExpiredAndEnqueueSummary(ctx, []int64{created.ID}, domain.OutboxEvent{
+		Topic:   "daily-summary",
+		Key:     "1710842400",
+		Payload: []byte(`{"window_start":1710841800,"window_end":1710842400,"users":[{"user_id":1,"completed":1,"not_completed":0}]}`),
+	}); err != nil {
 		t.Fatalf("UpdateExpiredAndEnqueueSummary() error = %v", err)
 	}
 

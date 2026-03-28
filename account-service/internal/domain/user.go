@@ -27,7 +27,7 @@ var (
 )
 
 type UserRepository interface {
-	CreateWithRegisteredEvent(ctx context.Context, user User) (User, error)
+	CreateWithOutboxEvent(ctx context.Context, user User, event OutboxEvent) (User, error)
 	GetByEmail(ctx context.Context, email string) (User, error)
 	GetByIDs(ctx context.Context, ids []int64) ([]User, error)
 }

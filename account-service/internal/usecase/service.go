@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"task-tracker/account-service/internal/domain"
@@ -46,7 +47,19 @@ func (s *AuthService) Register(ctx context.Context, email string, password strin
 		return "", err
 	}
 
-	user, err := s.repo.CreateWithRegisteredEvent(ctx, domain.User{Email: email, PasswordHash: hash})
+	payload, err := json.Marshal(struct {
+		Email string `json:"email"`
+	}{Email: email})
+	if err != nil {
+		logger.Log.Infof("auth register: marshal outbox payload email=%s err=%v", email, err)
+		return "", err
+	}
+
+	user, err := s.repo.CreateWithOutboxEvent(ctx, domain.User{Email: email, PasswordHash: hash}, domain.OutboxEvent{
+		Topic:   "register",
+		Key:     email,
+		Payload: payload,
+	})
 	if err != nil {
 		logger.Log.Infof("auth register: create user error email=%s err=%v", email, err)
 		return "", err

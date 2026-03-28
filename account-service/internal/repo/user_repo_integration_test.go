@@ -20,10 +20,10 @@ func TestUserRepositoryIntegration(t *testing.T) {
 	outboxRepo := NewOutboxRepository(db)
 	ctx := context.Background()
 
-	created, err := repo.CreateWithRegisteredEvent(ctx, domain.User{
+	created, err := repo.CreateWithOutboxEvent(ctx, domain.User{
 		Email:        "user@example.com",
 		PasswordHash: "hash",
-	})
+	}, domain.OutboxEvent{Topic: "register", Key: "user@example.com", Payload: []byte(`{"email":"user@example.com"}`)})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}

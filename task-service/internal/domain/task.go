@@ -44,7 +44,7 @@ type TaskRepository interface {
 	GetByUserIDAndDueDateBetween(ctx context.Context, userID int64, from, to time.Time) ([]Task, error)
 	GetByDueDateBetween(ctx context.Context, from, to time.Time) ([]Task, error)
 	GetByDueDateBetweenAndStatusNot(ctx context.Context, from, to time.Time, status TaskStatus) ([]Task, error)
-	UpdateExpiredAndEnqueueSummary(ctx context.Context, ids []int64, summary ExpiredSummary) error
+	UpdateExpiredAndEnqueueSummary(ctx context.Context, ids []int64, event OutboxEvent) error
 	UpdateStatusByIDAndUserID(ctx context.Context, id, userID int64, status TaskStatus) (Task, error)
 	UpdateStatusByIDs(ctx context.Context, ids []int64, status TaskStatus) error
 }
